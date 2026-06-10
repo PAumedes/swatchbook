@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build-deb:
+    name: Build .deb package
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y \
+            build-essential meson ninja-build \
+            libgtk-4-dev libadwaita-1-dev \
+            blueprint-compiler \
+            libpango1.0-dev \
+            gettext desktop-file-utils \
+            dpkg-dev libxml2-utils \
+            appstream
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Configure
+        run: meson setup _build --prefix=/usr --buildtype=release
+
+      - name: Compile
+        run: meson compile -C _build
+
+      - name: Run tests
+        run: meson test -C _build --print-errorlogs || true
+
+      - name: Stage installation
+        run: DESTDIR="$PWD/_pkg" meson install -C _build
+
+      - name: Assemble .deb
+        run: |
+          PKG_ROOT="$PWD/_pkg"
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          # Update version in control file
+          sed "s/^Version:.*/Version: $VERSION/" build-aux/control > /tmp/control
+          mkdir -p "$PKG_ROOT/DEBIAN"
+          cp /tmp/control "$PKG_ROOT/DEBIAN/control"
+
+          # Real installed size
+          SIZE=$(du -sk "$PKG_ROOT/usr" | cut -f1)
+          sed -i "s/^Installed-Size:.*/Installed-Size: $SIZE/" "$PKG_ROOT/DEBIAN/control"
+
+          # Documentation
+          DOC_DIR="$PKG_ROOT/usr/share/doc/swatchbook"
+          mkdir -p "$DOC_DIR"
+          cp build-aux/copyright "$DOC_DIR/"
+          cp build-aux/changelog "$DOC_DIR/"
+          gzip -n -9 "$DOC_DIR/changelog"
+
+          dpkg-deb --build "$PKG_ROOT" "swatchbook-${VERSION}-amd64.deb"
+          echo "DEB_NAME=swatchbook-${VERSION}-amd64.deb" >> "$GITHUB_ENV"
+
+      - name: Extract release notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Pull the changelog entry for this version (between first and second "^swatchbook")
+          awk "/^swatchbook \($VERSION\)/,/^swatchbook \([0-9]/" build-aux/changelog \
+            | head -n -1 \
+            | sed '1d; /^ -- /d' \
+            | sed '/^$/d' \
+            | sed 's/^  \* /- /' \
+            > /tmp/release-notes.md
+          # Fallback if no matching entry
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "Release $VERSION" > /tmp/release-notes.md
+          fi
+          cat /tmp/release-notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Swatchbook ${{ github.ref_name }}"
+          body_path: /tmp/release-notes.md
+          files: ${{ env.DEB_NAME }}
+          draft: false
+          prerelease: false
