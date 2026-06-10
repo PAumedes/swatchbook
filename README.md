@@ -125,7 +125,7 @@ make release-major   # 0.2.0 → 1.0.0  (milestone / breaking change)
 Each command will:
 1. Ask for a one-line changelog entry
 2. Bump the version in `Cargo.toml`, `meson.build`, and `build-aux/control`
-3. Prepend an entry to `build-aux/changelog`
+3. Prepend an entry to `build-aux/changelog` and `data/…metainfo.xml`
 4. Commit, tag, and push to GitHub
 5. GitHub Actions builds the `.deb` in the cloud (~4 min)
 6. The `.deb` is attached to a GitHub Release automatically

@@ -11,6 +11,7 @@ make release-patch
        │
        ├── bumps version in Cargo.toml, meson.build, build-aux/control
        ├── prepends entry to build-aux/changelog
+       ├── prepends <release> entry to data/…metainfo.xml
        ├── commits + tags vX.Y.Z
        ├── git push origin main + git push origin vX.Y.Z
        │
@@ -83,9 +84,10 @@ Or visit [github.com/PAumedes/swatchbook/releases](https://github.com/PAumedes/s
 | File | What changes |
 |---|---|
 | `Cargo.toml` | `version = "X.Y.Z"` |
-| `meson.build` | `version: 'X.Y.Z'` |
+| `meson.build` | `version: 'X.Y.Z'` (also sets the `VERSION` constant shown in the About dialog) |
 | `build-aux/control` | `Version: X.Y.Z` |
 | `build-aux/changelog` | New Debian-format entry prepended |
+| `data/…metainfo.xml` | New `<release>` block prepended inside `<releases>` |
 
 ---
 
