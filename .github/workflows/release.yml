@@ -8,9 +8,6 @@ on:
 permissions:
   contents: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build-deb:
     name: Build .deb package
@@ -18,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.1
 
       - name: Install build dependencies
         run: |
@@ -38,7 +35,7 @@ jobs:
           toolchain: stable
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4.2.3
+        uses: actions/cache@v5.0.3
         with:
           path: |
             ~/.cargo/registry

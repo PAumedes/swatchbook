@@ -1,3 +1,9 @@
+swatchbook (0.4.2) noble; urgency=low
+
+  * Update CI actions to checkout@v5 and cache@v5 (native Node.js 24 runtime)
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Tue, 10 Jun 2026 05:00:00 -0300
+
 swatchbook (0.4.1) noble; urgency=medium
 
   * Fix duplicate Spanish (es) entries in .desktop and metainfo that broke the release CI build

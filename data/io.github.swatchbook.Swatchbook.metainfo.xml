@@ -89,6 +89,11 @@
   </branding>
 
   <releases>
+    <release version="0.4.2" date="2026-06-10">
+      <description>
+        <p>Update CI actions to natively target Node.js 24, silencing the Node.js 20 deprecation warning.</p>
+      </description>
+    </release>
     <release version="0.4.1" date="2026-06-10">
       <description>
         <p>Fix duplicate Spanish entries in desktop and metainfo files that broke the release build.</p>
