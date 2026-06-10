@@ -1,3 +1,9 @@
+swatchbook (0.4.1) noble; urgency=medium
+
+  * Fix duplicate Spanish (es) entries in .desktop and metainfo that broke the release CI build
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Tue, 10 Jun 2026 04:20:00 -0300
+
 swatchbook (0.4.0) noble; urgency=medium
 
   * scrollable canvas, crash-recovery fix, CSS slug dedup, modified-flag indicator, 16 new tests

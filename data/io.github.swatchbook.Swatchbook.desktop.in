@@ -2,7 +2,6 @@
 Name=Swatchbook
 GenericName=Style Binder
 Comment=Craft and preview Markdown-powered style binders
-Comment[es]=Crea y previsualiza catálogos de estilos basados en Markdown
 Keywords=Markdown;Style;Swatch;Palette;Design;Canvas;Notes;Binder;
 Keywords[es]=Markdown;Estilo;Muestra;Paleta;Diseño;Lienzo;Notas;Catálogo;
 Exec=swatchbook %U

@@ -3,7 +3,6 @@
   <id>io.github.swatchbook.Swatchbook</id>
 
   <name>Swatchbook</name>
-  <name xml:lang="es">Swatchbook</name>
 
   <summary>Markdown-powered style binder</summary>
   <summary xml:lang="es">Catálogo de estilos basado en Markdown</summary>
@@ -90,6 +89,16 @@
   </branding>
 
   <releases>
+    <release version="0.4.1" date="2026-06-10">
+      <description>
+        <p>Fix duplicate Spanish entries in desktop and metainfo files that broke the release build.</p>
+      </description>
+    </release>
+    <release version="0.4.0" date="2026-06-10">
+      <description>
+        <p>Scrollable canvas, crash-recovery fix, CSS slug deduplication, modified-flag indicator, 16 new tests.</p>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-06-09">
       <description>
         <p>All phases completed: live Markdown parsing, canvas renderer,
