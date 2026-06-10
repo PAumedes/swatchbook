@@ -24,11 +24,13 @@ Built with Rust, GTK4, Libadwaita, and Blueprint — looks and behaves like a fi
 
 ## Install
 
-Download the latest `.deb` from the [Releases page](https://github.com/PAumedes/swatchbook/releases) and install it:
+Download the latest `.deb` from the [Releases page](https://github.com/PAumedes/swatchbook/releases) and install or upgrade with:
 
 ```bash
 sudo dpkg -i swatchbook-<version>-amd64.deb
 ```
+
+This works for both fresh installs and upgrades. Double-clicking the `.deb` in the App Center will show "Installed" rather than "Update" — use the terminal command above to upgrade.
 
 **Runtime requirements:** GTK 4.10+ and Libadwaita 1.4+ (included in Ubuntu 24.04+, Fedora 39+).
 
