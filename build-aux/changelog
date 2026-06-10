@@ -1,3 +1,9 @@
+swatchbook (0.5.0) noble; urgency=medium
+
+  * Fix preview and about me section
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Wed, 10 Jun 2026 01:45:30 -0300
+
 swatchbook (0.4.3) noble; urgency=medium
 
   * Fix canvas preview not rendering (set_visible_child pointed at DrawingArea

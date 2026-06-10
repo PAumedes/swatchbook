@@ -89,6 +89,11 @@
   </branding>
 
   <releases>
+    <release version="0.5.0" date="2026-06-10">
+      <description>
+        <p>Fix preview and about me section</p>
+      </description>
+    </release>
     <release version="0.4.3" date="2026-06-10">
       <description>
         <p>Fix canvas not rendering swatches; fix About dialog now floats freely; correct version shown in About; release script now keeps metainfo in sync.</p>
