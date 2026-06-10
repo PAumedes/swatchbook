@@ -1,3 +1,9 @@
+swatchbook (0.3.4) 26.04; urgency=medium
+
+  * Preview fixed
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Wed, 10 Jun 2026 00:31:15 -0300
+
 swatchbook (0.3.3) 26.04; urgency=medium
 
   * Preview is working
