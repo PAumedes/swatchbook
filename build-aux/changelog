@@ -1,3 +1,9 @@
+swatchbook (1.0.0) noble; urgency=medium
+
+  * First stable release of Swatchbook — a Markdown-powered colour-swatch editor for GNOME. Write your palette in Markdown and watch the live canvas update in real time. Features: live swatch preview with dark-mode support, keyboard navigation (arrow keys + Enter to copy hex), PNG and SVG export, CSS custom-property export, file open/save with auto-save and crash recovery, multi-window support, responsive split-view layout, and a built-in language switcher with translations in Spanish, French and German.
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Wed, 10 Jun 2026 14:14:18 -0300
+
 swatchbook (0.5.0) noble; urgency=medium
 
   * Fix preview and about me section
