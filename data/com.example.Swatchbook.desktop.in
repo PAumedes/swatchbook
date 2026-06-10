@@ -1,0 +1,29 @@
+[Desktop Entry]
+# Translatable keys (Name, GenericName, Comment, Keywords) are merged from the
+# project's gettext catalogues by i18n.merge_file() at build time. The explicit
+# locale-suffixed lines below act as bundled fallbacks / examples.
+Name=Swatchbook
+GenericName=Style Binder
+Comment=Craft and preview Markdown-powered style binders
+Comment[es]=Crea y previsualiza catálogos de estilos basados en Markdown
+Comment[fr]=Concevez et prévisualisez des recueils de styles en Markdown
+Comment[de]=Markdown-gestützte Stilmappen erstellen und in der Vorschau ansehen
+Keywords=Markdown;Style;Swatch;Palette;Design;Canvas;Notes;Binder;
+Exec=com.example.Swatchbook %U
+Icon=com.example.Swatchbook
+Terminal=false
+Type=Application
+Categories=GTK;GNOME;Graphics;Utility;TextEditor;
+StartupNotify=true
+DBusActivatable=true
+X-GNOME-UsesNotifications=true
+
+# Right-click launcher (jump-list) action exposed by the shell.
+Actions=NewCanvas;
+
+[Desktop Action NewCanvas]
+Name=New Canvas
+Name[es]=Nuevo lienzo
+Name[fr]=Nouveau canevas
+Name[de]=Neue Leinwand
+Exec=com.example.Swatchbook --new-canvas

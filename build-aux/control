@@ -1,0 +1,9 @@
+Package: swatchbook
+Version: 0.2.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libgtk-4-1, libadwaita-1-0
+Maintainer: The Swatchbook Authors <authors@example.com>
+Description: A Markdown-powered style binder for GNOME.
+ Write colour palettes and design tokens in plain Markdown.

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="swatchbook">
+
+  <schema id="com.example.Swatchbook" path="/com/example/Swatchbook/">
+
+    <key name="window-width" type="i">
+      <default>960</default>
+      <range min="360" max="32767"/>
+      <summary>Default window width</summary>
+      <description>
+        The last stored width, in logical pixels, of the main application
+        window. Restored on startup so the window reopens at its previous size.
+      </description>
+    </key>
+
+    <key name="window-height" type="i">
+      <default>640</default>
+      <range min="294" max="32767"/>
+      <summary>Default window height</summary>
+      <description>
+        The last stored height, in logical pixels, of the main application
+        window. Restored on startup so the window reopens at its previous size.
+      </description>
+    </key>
+
+    <key name="is-maximized" type="b">
+      <default>false</default>
+      <summary>Window maximized state</summary>
+      <description>
+        Whether the main application window was maximized when it was last
+        closed. When true, the window is re-maximized on startup.
+      </description>
+    </key>
+
+  </schema>
+
+</schemalist>

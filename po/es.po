@@ -1,0 +1,87 @@
+# Spanish translation for Swatchbook.
+# Copyright (C) 2026 The Swatchbook Authors
+# This file is distributed under the same license as the swatchbook package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: swatchbook 0.1.0\n"
+"Report-Msgid-Bugs-To: https://example.com/swatchbook/issues\n"
+"POT-Creation-Date: 2026-06-09 00:00+0000\n"
+"PO-Revision-Date: 2026-06-09 00:00+0000\n"
+"Last-Translator: The Swatchbook Authors <authors@example.com>\n"
+"Language-Team: Spanish <es@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# ── Window / UI (window.blp) ──────────────────────────────────────────────────
+
+msgid "Swatchbook"
+msgstr "Swatchbook"
+
+msgid "Markdown"
+msgstr "Markdown"
+
+msgid "Main Menu"
+msgstr "Menú principal"
+
+msgid "Markdown source"
+msgstr "Código Markdown"
+
+msgid "Preview"
+msgstr "Vista previa"
+
+msgid "Toggle Rendered Preview"
+msgstr "Alternar vista renderizada"
+
+msgid "Interactive Canvas"
+msgstr "Lienzo interactivo"
+
+msgid "Your rendered swatches appear here. Edit the Markdown on the left to update the binder."
+msgstr "Las muestras renderizadas aparecen aquí. Edita el Markdown a la izquierda para actualizar el catálogo."
+
+msgid "Swatch preview canvas"
+msgstr "Lienzo de vista previa de muestras"
+
+# ── Menu items (window.blp) ───────────────────────────────────────────────────
+
+msgid "_New Canvas"
+msgstr "_Nuevo lienzo"
+
+msgid "_About Swatchbook"
+msgstr "_Acerca de Swatchbook"
+
+msgid "_Quit"
+msgstr "_Salir"
+
+# ── File dialogs (window.rs) ──────────────────────────────────────────────────
+
+msgid "Open Binder"
+msgstr "Abrir catálogo"
+
+msgid "Markdown files"
+msgstr "Archivos Markdown"
+
+msgid "Save Binder As"
+msgstr "Guardar catálogo como"
+
+# ── Document titles (document.rs) ─────────────────────────────────────────────
+
+msgid "Untitled"
+msgstr "Sin título"
+
+# ── About dialog (main.rs) ────────────────────────────────────────────────────
+
+msgid "A Markdown-powered style binder for GNOME."
+msgstr "Un catálogo de estilos basado en Markdown para GNOME."
+
+# ── Desktop entry (com.example.Swatchbook.desktop.in) ────────────────────────
+
+msgid "Style Binder"
+msgstr "Catálogo de estilos"
+
+msgid "Craft and preview Markdown-powered style binders"
+msgstr "Crea y previsualiza catálogos de estilos basados en Markdown"
+

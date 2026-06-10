@@ -1,0 +1,7 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Swatchbook
+Source: https://example.com/swatchbook
+
+Files: *
+Copyright: 2026 The Swatchbook Authors
+License: GPL-3.0-only

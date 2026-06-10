@@ -1,0 +1,149 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $SwatchbookWindow: Adw.ApplicationWindow {
+  title: _("Swatchbook");
+  default-width: 960;
+  default-height: 640;
+  width-request: 360;
+  height-request: 294;
+
+  // Collapse the split view into a single, navigable column on narrow
+  // displays (phones, half-tiled windows). Adw.HeaderBar in each pane keeps a
+  // first-party look and adapts its window controls automatically.
+  Adw.Breakpoint {
+    condition ("max-width: 640sp")
+
+    setters {
+      split_view.collapsed: true;
+    }
+  }
+
+  content: Adw.NavigationSplitView split_view {
+    min-sidebar-width: 320;
+    max-sidebar-width: 540;
+    sidebar-width-fraction: 0.5;
+
+    // ----------------------------------------------------------------------
+    // Sidebar pane — the Markdown editor
+    // ----------------------------------------------------------------------
+    sidebar: Adw.NavigationPage {
+      title: _("Markdown");
+      tag: "editor";
+
+      child: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          [start]
+          Button {
+            action-name: "app.new-canvas";
+            icon-name: "document-new-symbolic";
+            tooltip-text: _("New Canvas");
+          }
+
+          [end]
+          MenuButton {
+            primary: true;
+            icon-name: "open-menu-symbolic";
+            tooltip-text: _("Main Menu");
+            menu-model: primary_menu;
+          }
+        }
+
+        content: ScrolledWindow {
+          hexpand: true;
+          vexpand: true;
+          hscrollbar-policy: never;
+
+          TextView editor {
+            styles [
+              "swatchbook-editor",
+            ]
+
+            monospace: true;
+            wrap-mode: word_char;
+            top-margin: 12;
+            bottom-margin: 12;
+            left-margin: 12;
+            right-margin: 12;
+            accepts-tab: true;
+
+            accessibility {
+              label: _("Markdown source");
+            }
+          }
+        };
+      };
+    };
+
+    // ----------------------------------------------------------------------
+    // Content pane — the live preview / interactive canvas
+    // ----------------------------------------------------------------------
+    content: Adw.NavigationPage {
+      title: _("Preview");
+      tag: "preview";
+
+      child: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          [end]
+          ToggleButton render_toggle {
+            icon-name: "view-reveal-symbolic";
+            tooltip-text: _("Toggle Rendered Preview");
+            active: true;
+          }
+        }
+
+        content: Adw.StatusPage status_page {
+          icon-name: "applications-graphics-symbolic";
+          title: _("Interactive Canvas");
+          description: _("Your rendered swatches appear here. Edit the Markdown on the left to update the binder.");
+
+          // The placeholder canvas. A draw function is attached in window.rs;
+          // this is where the real, interactive rendering will live.
+          child: Frame {
+            margin-start: 24;
+            margin-end: 24;
+            margin-bottom: 24;
+            height-request: 180;
+
+            DrawingArea canvas {
+              hexpand: true;
+              vexpand: true;
+              content-width: 480;
+              content-height: 180;
+
+              accessibility {
+                label: _("Swatch preview canvas");
+              }
+            }
+          };
+        };
+      };
+    };
+  };
+}
+
+// --------------------------------------------------------------------------
+// Primary application menu
+// --------------------------------------------------------------------------
+menu primary_menu {
+  section {
+    item {
+      label: _("_New Canvas");
+      action: "app.new-canvas";
+    }
+  }
+
+  section {
+    item {
+      label: _("_About Swatchbook");
+      action: "app.about";
+    }
+
+    item {
+      label: _("_Quit");
+      action: "app.quit";
+    }
+  }
+}
