@@ -1,3 +1,13 @@
+swatchbook (0.4.3) noble; urgency=medium
+
+  * Fix canvas preview not rendering (set_visible_child pointed at DrawingArea
+    inside ScrolledWindow instead of the ScrolledWindow itself)
+  * Fix About dialog: remove transient_for so it floats freely as a top-level window
+  * Fix meson.build version (was stuck at 0.4.0) so About dialog shows correct version
+  * Fix release.sh: now also updates metainfo.xml releases section
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Tue, 10 Jun 2026 05:30:00 -0300
+
 swatchbook (0.4.2) noble; urgency=low
 
   * Update CI actions to checkout@v5 and cache@v5 (native Node.js 24 runtime)

@@ -32,6 +32,8 @@ mod imp {
         #[template_child]
         pub status_page: TemplateChild<adw::StatusPage>,
         #[template_child]
+        pub canvas_scroll: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
         pub canvas: TemplateChild<gtk::DrawingArea>,
 
         pub settings: OnceCell<gio::Settings>,
@@ -230,7 +232,7 @@ impl SwatchbookWindow {
         self.imp().canvas.set_content_height(canvas_h.max(360));
 
         if has_swatches {
-            self.imp().canvas_stack.set_visible_child(&*self.imp().canvas);
+            self.imp().canvas_stack.set_visible_child(&*self.imp().canvas_scroll);
             self.imp().canvas.queue_draw();
         } else {
             self.imp().canvas_stack.set_visible_child(&*self.imp().status_page);

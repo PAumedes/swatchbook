@@ -34,6 +34,7 @@ CARGO_TOML="$PROJECT_DIR/Cargo.toml"
 MESON_BUILD="$PROJECT_DIR/meson.build"
 CONTROL="$PROJECT_DIR/build-aux/control"
 CHANGELOG="$PROJECT_DIR/build-aux/changelog"
+METAINFO="$PROJECT_DIR/data/io.github.swatchbook.Swatchbook.metainfo.xml"
 
 # Target distribution codename for the Debian changelog stanza.
 DISTRO="noble"  # Ubuntu 24.04 LTS
@@ -131,13 +132,19 @@ NEW_ENTRY="swatchbook ($NEW_VERSION) $DISTRO; urgency=medium
 EXISTING=$(cat "$CHANGELOG")
 printf "%s\n%s" "$NEW_ENTRY" "$EXISTING" > "$CHANGELOG"
 
+info "Updating metainfo.xml"
+TODAY=$(date '+%Y-%m-%d')
+COMMIT_MSG_XML=$(printf '%s' "$COMMIT_MSG" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+NEW_RELEASE="    <release version=\"$NEW_VERSION\" date=\"$TODAY\">\n      <description>\n        <p>$COMMIT_MSG_XML</p>\n      </description>\n    </release>"
+sed -i "s|  <releases>|  <releases>\n$NEW_RELEASE|" "$METAINFO"
+
 success "Version files updated"
 
 # ── Git commit, tag, push ────────────────────────────────────────────────────
 if git -C "$PROJECT_DIR" rev-parse --git-dir &>/dev/null; then
     info "Staging version files"
     git -C "$PROJECT_DIR" add \
-        "$CARGO_TOML" "$MESON_BUILD" "$CONTROL" "$CHANGELOG"
+        "$CARGO_TOML" "$MESON_BUILD" "$CONTROL" "$CHANGELOG" "$METAINFO"
 
     git -C "$PROJECT_DIR" commit -m "chore: release v$NEW_VERSION"
     git -C "$PROJECT_DIR" tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION: $COMMIT_MSG"

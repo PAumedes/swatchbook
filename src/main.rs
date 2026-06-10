@@ -134,9 +134,7 @@ fn build_window(app: &adw::Application) {
 }
 
 /// Presents the standard Adwaita about dialog.
-fn show_about(app: &adw::Application) {
-    let window = app.active_window();
-
+fn show_about(_app: &adw::Application) {
     let about = adw::AboutWindow::builder()
         .application_name("Swatchbook")
         .application_icon(APP_ID)
@@ -149,10 +147,6 @@ fn show_about(app: &adw::Application) {
         .license_type(gtk::License::Gpl30)
         .copyright("© 2026 Patricio Aumedes")
         .build();
-
-    if let Some(window) = window {
-        about.set_transient_for(Some(&window));
-    }
 
     about.present();
 }
