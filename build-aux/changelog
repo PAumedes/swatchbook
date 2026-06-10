@@ -1,3 +1,10 @@
+swatchbook (0.2.3) 26.04; urgency=medium
+
+  * Remove distrobox swatchbook-dev desktop entry collision
+  * Add SWATCHBOOK_LOG env var to enable GLib debug logging
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Tue, 09 Jun 2026 23:29:43 -0300
+
 swatchbook (0.2.2) 26.04; urgency=medium
 
   * Fix app launch: correct Exec path in desktop file (was app ID, not binary name)

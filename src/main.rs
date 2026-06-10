@@ -18,6 +18,13 @@ use crate::config::{APP_ID, GETTEXT_PACKAGE, LOCALEDIR, PKGDATADIR, VERSION};
 use crate::window::SwatchbookWindow;
 
 fn main() -> glib::ExitCode {
+    // -- Logging -----------------------------------------------------------
+    // GLib structured logging goes to the journal when running under systemd
+    // and to stderr otherwise. SWATCHBOOK_LOG=1 enables debug-level output.
+    if std::env::var("SWATCHBOOK_LOG").is_ok() {
+        unsafe { std::env::set_var("G_MESSAGES_DEBUG", "all") };
+    }
+
     // -- Localization ------------------------------------------------------
     // Initialise gettext so `_()`-equivalent lookups in the resources and the
     // bundled translations resolve at runtime.
