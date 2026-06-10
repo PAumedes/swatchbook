@@ -166,9 +166,11 @@ impl SwatchbookWindow {
 
             imp.document.borrow_mut().is_modified = true;
 
-            // Cancel any pending debounce timer.
+            // Cancel any pending debounce timer. The take() ensures we only
+            // call remove() on IDs that haven't already fired and removed themselves.
             if let Some(id) = imp.debounce_id.borrow_mut().take() {
-                id.remove();
+                // remove() can only fail if the source already fired — ignore that.
+                let _ = id.remove();
             }
 
             let (start, end) = buf.bounds();
@@ -176,8 +178,11 @@ impl SwatchbookWindow {
             let window_weak2 = win.downgrade();
 
             // Re-parse 150 ms after the last keystroke.
+            // Clear debounce_id from inside the closure so the next keystroke
+            // won't try to remove an already-fired source.
             let id = glib::timeout_add_local(std::time::Duration::from_millis(150), move || {
                 if let Some(win) = window_weak2.upgrade() {
+                    win.imp().debounce_id.borrow_mut().take();
                     win.reparse(&text);
                 }
                 glib::ControlFlow::Break

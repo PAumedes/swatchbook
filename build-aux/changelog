@@ -1,3 +1,11 @@
+swatchbook (0.3.2) 26.04; urgency=medium
+
+  * Fix crash when typing: debounce SourceId was removed twice (once on fire,
+    once on next keystroke). Clear debounce_id from inside the closure so
+    remove() is never called on an already-fired source.
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Tue, 09 Jun 2026 23:50:59 -0300
+
 swatchbook (0.3.1) 26.04; urgency=medium
 
   * Fix preview blank on launch: call reparse() immediately after seeding text
