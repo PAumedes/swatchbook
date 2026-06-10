@@ -137,12 +137,13 @@ impl SwatchbookWindow {
 
     fn setup_canvas(&self) {
         let imp = self.imp();
-        let swatches = imp.swatches.clone();
         let style_manager = adw::StyleManager::default();
         let style_manager2 = style_manager.clone();
+        let window_weak = self.downgrade();
 
         imp.canvas.set_draw_func(move |_area, cr, width, height| {
-            let items = swatches.borrow();
+            let Some(win) = window_weak.upgrade() else { return };
+            let items = win.imp().swatches.borrow();
             let dark = style_manager.is_dark();
             renderer::render(cr, &items, width as f64, height as f64, dark);
         });
