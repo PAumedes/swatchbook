@@ -40,6 +40,19 @@ pub struct SwatchRect {
     pub h: f64,
 }
 
+/// Total pixel height needed to render `count` swatches at the given `width`.
+///
+/// Pure function — safe to call without a live GTK canvas.
+pub fn content_height(count: usize, width: f64) -> f64 {
+    if count == 0 {
+        return 0.0;
+    }
+    let rects = layout(count, width);
+    let last = rects.last().expect("non-empty count yields non-empty rects");
+    // last swatch bottom + name label + hex label + bottom padding
+    last.y + SWATCH_H + LABEL_GAP + LABEL_H + LABEL_GAP + HEX_H + PADDING
+}
+
 /// Compute swatch positions for `count` items in a canvas of `(width, height)`.
 ///
 /// This is a pure function — no Cairo or GTK; fully unit-testable.
@@ -78,11 +91,7 @@ pub fn render(
         return;
     }
 
-    let (label_a, secondary_a): (f64, f64) = if dark_mode {
-        (0.87, 0.55)
-    } else {
-        (0.87, 0.55)
-    };
+    let (label_a, secondary_a) = (0.87_f64, 0.55_f64);
     let (label_rgb, secondary_rgb): ((f64, f64, f64), (f64, f64, f64)) = if dark_mode {
         ((1.0, 1.0, 1.0), (1.0, 1.0, 1.0))
     } else {
@@ -164,13 +173,32 @@ pub fn export_svg(items: &[SwatchItem], width: u32, height: u32, path: &std::pat
 /// ```
 pub fn to_css_variables(items: &[SwatchItem]) -> String {
     let mut out = String::from(":root {\n");
+    let mut seen: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+
     for item in items {
-        let slug = item.name
+        // Split on non-alphanumeric runs so "Hello  World" → "hello-world" (no double dash).
+        let base: String = item.name
             .to_lowercase()
-            .chars()
-            .map(|c| if c.is_alphanumeric() { c } else { '-' })
-            .collect::<String>();
-        let slug = slug.trim_matches('-').to_string();
+            .split(|c: char| !c.is_alphanumeric())
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join("-");
+        // Fall back to the hex value (without #) when the name is all punctuation.
+        let base = if base.is_empty() {
+            item.hex.trim_start_matches('#').to_string()
+        } else {
+            base
+        };
+
+        // Deduplicate: "primary", "primary-2", "primary-3", …
+        let count = seen.entry(base.clone()).or_insert(0);
+        *count += 1;
+        let slug = if *count == 1 {
+            base
+        } else {
+            format!("{base}-{count}")
+        };
+
         out.push_str(&format!("  --color-{slug}: {};\n", item.hex));
     }
     out.push('}');

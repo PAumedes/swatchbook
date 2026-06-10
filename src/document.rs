@@ -45,7 +45,7 @@ impl Document {
     pub fn save(&mut self) -> io::Result<()> {
         match self.path.clone() {
             Some(p) => self.save_to(p),
-            None => Err(io::Error::new(io::ErrorKind::Other, "no path set — use save_to")),
+            None => Err(io::Error::other("no path set — use save_to")),
         }
     }
 

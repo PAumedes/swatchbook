@@ -9,10 +9,6 @@ use crate::token::{extract_color, ColorValue};
 pub struct SwatchEntry {
     pub name: String,
     pub color: ColorValue,
-    /// The original token string as it appeared in the source (e.g. `#3482E3`).
-    /// Used by the CSS export phase.
-    #[allow(dead_code)]
-    pub raw: String,
 }
 
 /// A headed group of colour swatches.
@@ -51,7 +47,7 @@ pub fn parse(markdown: &str) -> Document {
     // Accumulated plain text for the current list item (used as swatch name).
     let mut item_label = String::new();
     // A colour found in the current list item, waiting to be flushed.
-    let mut pending: Option<(ColorValue, String)> = None;
+    let mut pending: Option<ColorValue> = None;
 
     for event in parser {
         match event {
@@ -73,12 +69,12 @@ pub fn parse(markdown: &str) -> Document {
             }
 
             Event::End(TagEnd::Item) => {
-                if let Some((color, raw)) = pending.take() {
+                if let Some(color) = pending.take() {
                     let name = clean_label(&item_label);
+                    let raw = color.to_hex_string();
                     current.swatches.push(SwatchEntry {
-                        name: if name.is_empty() { raw.clone() } else { name },
+                        name: if name.is_empty() { raw } else { name },
                         color,
-                        raw,
                     });
                 }
                 item_label.clear();
@@ -90,7 +86,7 @@ pub fn parse(markdown: &str) -> Document {
                     heading_buf.push_str(&text);
                 } else if let Some(color) = extract_color(&text) {
                     // Keep the last colour token found in the item.
-                    pending = Some((color, text.to_string()));
+                    pending = Some(color);
                 } else {
                     item_label.push_str(&text);
                 }

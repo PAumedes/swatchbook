@@ -22,7 +22,7 @@ fn main() -> glib::ExitCode {
     // GLib structured logging goes to the journal when running under systemd
     // and to stderr otherwise. SWATCHBOOK_LOG=1 enables debug-level output.
     if std::env::var("SWATCHBOOK_LOG").is_ok() {
-        unsafe { std::env::set_var("G_MESSAGES_DEBUG", "all") };
+        std::env::set_var("G_MESSAGES_DEBUG", "all");
     }
 
     // -- Localization ------------------------------------------------------
@@ -73,17 +73,22 @@ fn main() -> glib::ExitCode {
     // Bridge the CLI option onto the in-process `app.new-canvas` action so a
     // second `swatchbook --new-canvas` invocation is forwarded to the running
     // primary instance instead of spawning a duplicate process.
+    //
+    // When `--new-canvas` is set we skip `activate()` and go straight to the
+    // action; otherwise we'd get two windows on a cold start (activate opens
+    // one, the action opens another).
     app.connect_command_line(|app, command_line| {
         let options = command_line.options_dict();
-        app.activate();
-
-        if options
+        let new_canvas = options
             .lookup::<bool>("new-canvas")
             .ok()
             .flatten()
-            .unwrap_or(false)
-        {
+            .unwrap_or(false);
+
+        if new_canvas {
             app.activate_action("new-canvas", None);
+        } else {
+            app.activate();
         }
 
         glib::ExitCode::SUCCESS.value()

@@ -73,8 +73,8 @@ mod imp {
             obj.setup_canvas();
             obj.setup_editor();
             obj.setup_window_actions();
+            obj.check_crash_recovery(); // must run before setup_autosave writes the sentinel
             obj.setup_autosave();
-            obj.check_crash_recovery();
             obj.seed_document();
         }
     }
@@ -150,6 +150,16 @@ impl SwatchbookWindow {
             renderer::render(cr, &items, width as f64, height as f64, dark);
         });
 
+        // Update canvas height whenever the allocated width changes so the
+        // content_height calculation uses the real width, not the initial guess.
+        let win_weak = self.downgrade();
+        imp.canvas.connect_resize(move |canvas, width, _height| {
+            let Some(win) = win_weak.upgrade() else { return };
+            let count = win.imp().swatches.borrow().len();
+            let h = renderer::content_height(count, width as f64).ceil() as i32;
+            canvas.set_content_height(h.max(360));
+        });
+
         // Redraw on colour-scheme change.
         let canvas = imp.canvas.get();
         style_manager2.connect_dark_notify(move |_| {
@@ -168,6 +178,7 @@ impl SwatchbookWindow {
             let imp = win.imp();
 
             imp.document.borrow_mut().is_modified = true;
+            win.update_title();
 
             // Cancel any pending debounce timer. The take() ensures we only
             // call remove() on IDs that haven't already fired and removed themselves.
@@ -213,7 +224,10 @@ impl SwatchbookWindow {
             .collect();
 
         let has_swatches = !items.is_empty();
+        let canvas_w = self.imp().canvas.allocated_width().max(480) as f64;
+        let canvas_h = renderer::content_height(items.len(), canvas_w).ceil() as i32;
         *self.imp().swatches.borrow_mut() = items;
+        self.imp().canvas.set_content_height(canvas_h.max(360));
 
         if has_swatches {
             self.imp().canvas_stack.set_visible_child(&*self.imp().canvas);
@@ -277,7 +291,10 @@ impl SwatchbookWindow {
             Ok(doc) => {
                 let content = doc.content.clone();
                 *self.imp().document.borrow_mut() = doc;
+                // set_text fires `changed` synchronously, which sets is_modified=true.
+                // Reset it immediately — a just-opened file is not modified.
                 self.imp().editor.buffer().set_text(&content);
+                self.imp().document.borrow_mut().is_modified = false;
                 self.update_title();
             }
             Err(e) => eprintln!("swatchbook: failed to open file: {e}"),
@@ -336,8 +353,9 @@ impl SwatchbookWindow {
 
     fn canvas_export_size(&self) -> (u32, u32) {
         let w = self.imp().canvas.allocated_width().max(480) as u32;
-        let h = self.imp().canvas.allocated_height().max(360) as u32;
-        (w, h)
+        let items = self.imp().swatches.borrow();
+        let h = renderer::content_height(items.len(), w as f64).ceil() as u32;
+        (w, h.max(360))
     }
 
     fn show_toast(&self, message: &str) {
@@ -478,7 +496,11 @@ impl SwatchbookWindow {
              - **Warning** — `#F5C211`\n\
              - **Error** — `#E53935`\n\
              - **Purple** — `#9C27B0`\n";
+        // set_text fires `changed` synchronously; reset the flag so a fresh
+        // window doesn't start life with the unsaved-changes bullet.
         buf.set_text(text);
+        self.imp().document.borrow_mut().is_modified = false;
+        self.update_title();
         // Render immediately — don't wait for the debounce timer.
         self.reparse(text);
     }

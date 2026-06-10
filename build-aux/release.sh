@@ -35,6 +35,9 @@ MESON_BUILD="$PROJECT_DIR/meson.build"
 CONTROL="$PROJECT_DIR/build-aux/control"
 CHANGELOG="$PROJECT_DIR/build-aux/changelog"
 
+# Target distribution codename for the Debian changelog stanza.
+DISTRO="noble"  # Ubuntu 24.04 LTS
+
 # ── Parse arguments ──────────────────────────────────────────────────────────
 BUMP_TYPE="${1:-}"
 COMMIT_MSG=""
@@ -118,7 +121,7 @@ sed -i "s/^Version: .*/Version: $NEW_VERSION/" "$CONTROL"
 
 # ── Prepend changelog entry ──────────────────────────────────────────────────
 info "Updating build-aux/changelog"
-NEW_ENTRY="swatchbook ($NEW_VERSION) 26.04; urgency=medium
+NEW_ENTRY="swatchbook ($NEW_VERSION) $DISTRO; urgency=medium
 
   * $COMMIT_MSG
 

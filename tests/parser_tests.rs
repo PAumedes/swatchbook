@@ -68,3 +68,53 @@ fn all_swatches_flattens() {
     let doc = parse(md);
     assert_eq!(doc.all_swatches().count(), 3);
 }
+
+// ── clean_label / name extraction ────────────────────────────────────────────
+
+#[test]
+fn label_strips_bold_markers() {
+    let md = "# P\n\n- **Primary** — `#ff0000`\n";
+    let doc = parse(md);
+    assert_eq!(doc.sections[0].swatches[0].name, "Primary");
+}
+
+#[test]
+fn label_strips_trailing_dash_and_em_dash() {
+    // Trailing " —" or " -" should be removed from the name.
+    let md = "# P\n\n- Background — `#ffffff`\n";
+    let doc = parse(md);
+    assert_eq!(doc.sections[0].swatches[0].name, "Background");
+}
+
+#[test]
+fn label_strips_italic_markers() {
+    let md = "# P\n\n- *Accent* `#aabbcc`\n";
+    let doc = parse(md);
+    assert_eq!(doc.sections[0].swatches[0].name, "Accent");
+}
+
+#[test]
+fn item_with_no_text_falls_back_to_normalised_hex() {
+    // A bare colour token with no label text → name is the canonical hex.
+    let md = "# P\n\n- `#E53935`\n";
+    let doc = parse(md);
+    let swatch = &doc.sections[0].swatches[0];
+    // raw was E53935 uppercase; normalised hex is lowercase
+    assert_eq!(swatch.name, "#e53935");
+}
+
+#[test]
+fn last_color_token_wins_in_item() {
+    // Only the final colour code in a list item is used.
+    let md = "# P\n\n- See `#ff0000` or `#00ff00`\n";
+    let doc = parse(md);
+    assert_eq!(doc.sections[0].swatches[0].color, ColorValue::Hex(0x00, 0xff, 0x00));
+}
+
+#[test]
+fn item_without_color_is_ignored() {
+    let md = "# P\n\n- No colour here\n- Red `#ff0000`\n";
+    let doc = parse(md);
+    assert_eq!(doc.sections[0].swatches.len(), 1);
+    assert_eq!(doc.sections[0].swatches[0].name, "Red");
+}

@@ -54,7 +54,7 @@ jobs:
         run: meson compile -C _build
 
       - name: Run tests
-        run: meson test -C _build --print-errorlogs || true
+        run: meson test -C _build --print-errorlogs
 
       - name: Stage installation
         run: DESTDIR="$PWD/_pkg" meson install -C _build

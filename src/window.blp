@@ -82,14 +82,20 @@ template $SwatchbookWindow: Adw.ApplicationWindow {
             description: _("Type a colour in the editor — e.g.  - **Red** — `#e53935`");
           }
 
-          DrawingArea canvas {
+          ScrolledWindow {
             hexpand: true;
             vexpand: true;
-            content-width: 480;
-            content-height: 360;
+            hscrollbar-policy: never;
+            vscrollbar-policy: automatic;
 
-            accessibility {
-              label: _("Swatch preview canvas");
+            DrawingArea canvas {
+              hexpand: true;
+              content-width: 480;
+              content-height: 360;
+
+              accessibility {
+                label: _("Swatch preview canvas");
+              }
             }
           }
         };
