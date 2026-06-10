@@ -137,9 +137,7 @@ impl Document {
 fn data_dir() -> PathBuf {
     let base = std::env::var("XDG_DATA_HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            dirs_or_home().join(".local").join("share")
-        });
+        .unwrap_or_else(|_| dirs_or_home().join(".local").join("share"));
     base.join("swatchbook")
 }
 

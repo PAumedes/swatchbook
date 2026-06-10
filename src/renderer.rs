@@ -48,7 +48,9 @@ pub fn content_height(count: usize, width: f64) -> f64 {
         return 0.0;
     }
     let rects = layout(count, width);
-    let last = rects.last().expect("non-empty count yields non-empty rects");
+    let last = rects
+        .last()
+        .expect("non-empty count yields non-empty rects");
     // last swatch bottom + name label + hex label + bottom padding
     last.y + SWATCH_H + LABEL_GAP + LABEL_H + LABEL_GAP + HEX_H + PADDING
 }
@@ -70,7 +72,12 @@ pub fn layout(count: usize, width: f64) -> Vec<SwatchRect> {
             let row = i / cols;
             let x = PADDING + col as f64 * (swatch_w + GAP);
             let y = PADDING + row as f64 * (SWATCH_H + LABEL_H + HEX_H + LABEL_GAP * 2.0 + GAP);
-            SwatchRect { x, y, w: swatch_w, h: SWATCH_H }
+            SwatchRect {
+                x,
+                y,
+                w: swatch_w,
+                h: SWATCH_H,
+            }
         })
         .collect()
 }
@@ -109,7 +116,14 @@ pub fn render(
 
         // Focus ring — drawn behind the swatch so the fill clips over the inner edge
         if focused == Some(i) {
-            rounded_rect(cr, rect.x - 3.0, rect.y - 3.0, rect.w + 6.0, rect.h + 6.0, RADIUS + 3.0);
+            rounded_rect(
+                cr,
+                rect.x - 3.0,
+                rect.y - 3.0,
+                rect.w + 6.0,
+                rect.h + 6.0,
+                RADIUS + 3.0,
+            );
             cr.set_source_rgba(0.208, 0.518, 0.894, 1.0); // #3584e4 GNOME accent blue
             cr.set_line_width(3.0);
             let _ = cr.stroke();

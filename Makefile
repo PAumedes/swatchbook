@@ -186,14 +186,14 @@ release-major: ## Bump major version (0.1.0 → 1.0.0), build .deb, tag git
 
 .PHONY: release-watch
 release-watch: ## Watch the latest GitHub Actions CI run in real time
-	@gh run watch --repo patricioaumedes/swatchbook
+	@gh run watch --repo PAumedes/swatchbook
 
 .PHONY: release-status
 release-status: ## Show recent GitHub Actions runs and release assets
 	@printf '$(BOLD)Recent CI runs:$(RESET)\n'
-	@gh run list --repo patricioaumedes/swatchbook --limit 5
+	@gh run list --repo PAumedes/swatchbook --limit 5
 	@printf '\n$(BOLD)Published releases:$(RESET)\n'
-	@gh release list --repo patricioaumedes/swatchbook --limit 5
+	@gh release list --repo PAumedes/swatchbook --limit 5
 
 .PHONY: changelog
 changelog: ## Show the full changelog
