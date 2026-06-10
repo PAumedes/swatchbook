@@ -5,17 +5,16 @@ Comment=Craft and preview Markdown-powered style binders
 Comment[es]=Crea y previsualiza catálogos de estilos basados en Markdown
 Keywords=Markdown;Style;Swatch;Palette;Design;Canvas;Notes;Binder;
 Keywords[es]=Markdown;Estilo;Muestra;Paleta;Diseño;Lienzo;Notas;Catálogo;
-Exec=io.github.swatchbook.Swatchbook %U
+Exec=swatchbook %U
 Icon=io.github.swatchbook.Swatchbook
 Terminal=false
 Type=Application
 Categories=GTK;GNOME;Graphics;Utility;TextEditor;
 StartupNotify=true
-DBusActivatable=true
 X-GNOME-UsesNotifications=true
 Actions=NewCanvas;
 
 [Desktop Action NewCanvas]
 Name=New Canvas
 Name[es]=Nuevo lienzo
-Exec=io.github.swatchbook.Swatchbook --new-canvas
+Exec=swatchbook --new-canvas

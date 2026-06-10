@@ -82,6 +82,9 @@ incus exec "$CONTAINER_NAME" -- bash -c "
     # 3. Debian metadata
     mkdir -p \"\$PKG_ROOT/DEBIAN\"
     cp /tmp/swatchbook/build-aux/control \"\$PKG_ROOT/DEBIAN/\"
+    cp /tmp/swatchbook/build-aux/postinst \"\$PKG_ROOT/DEBIAN/\"
+    cp /tmp/swatchbook/build-aux/postrm \"\$PKG_ROOT/DEBIAN/\"
+    chmod 0755 \"\$PKG_ROOT/DEBIAN/postinst\" \"\$PKG_ROOT/DEBIAN/postrm\"
 
     # 4. Documentation
     DOC_DIR=\"\$PKG_ROOT/usr/share/doc/swatchbook\"

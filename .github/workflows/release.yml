@@ -68,6 +68,9 @@ jobs:
           sed "s/^Version:.*/Version: $VERSION/" build-aux/control > /tmp/control
           mkdir -p "$PKG_ROOT/DEBIAN"
           cp /tmp/control "$PKG_ROOT/DEBIAN/control"
+          cp build-aux/postinst "$PKG_ROOT/DEBIAN/postinst"
+          cp build-aux/postrm "$PKG_ROOT/DEBIAN/postrm"
+          chmod 0755 "$PKG_ROOT/DEBIAN/postinst" "$PKG_ROOT/DEBIAN/postrm"
 
           # Real installed size
           SIZE=$(du -sk "$PKG_ROOT/usr" | cut -f1)

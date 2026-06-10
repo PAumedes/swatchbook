@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+
+# Update icon cache so the app icon appears immediately
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
+fi
+
+# Compile GSettings schema
+if command -v glib-compile-schemas >/dev/null 2>&1; then
+    glib-compile-schemas /usr/share/glib-2.0/schemas || true
+fi
+
+# Update desktop database
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications || true
+fi
+
+# Update AppStream cache
+if command -v appstreamcli >/dev/null 2>&1; then
+    appstreamcli refresh --force || true
+fi

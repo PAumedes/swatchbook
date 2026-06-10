@@ -1,3 +1,10 @@
+swatchbook (0.2.2) 26.04; urgency=medium
+
+  * Fix app launch: correct Exec path in desktop file (was app ID, not binary name)
+  * Add postinst/postrm scripts to refresh icon cache, GSettings schema and desktop db on install
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Tue, 09 Jun 2026 23:23:08 -0300
+
 swatchbook (0.2.1) 26.04; urgency=medium
 
   * Fix App Center icon, publisher name, and metainfo URLs
