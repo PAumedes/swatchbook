@@ -48,8 +48,9 @@
             "buildsystem": "meson",
             "sources": [
                 {
-                    "type": "dir",
-                    "path": "."
+                    "type": "archive",
+                    "url": "https://github.com/PAumedes/swatchbook/archive/refs/tags/v1.0.1.tar.gz",
+                    "sha256": "6bfdd4cc32d5893093cd8446f79c0347d9997f868e052b9baa061e681e653501"
                 },
                 "cargo-sources.json"
             ]

@@ -17,4 +17,3 @@ build-aux/signing.conf
 # Flatpak
 /_flatpak-build/
 /.flatpak-builder/
-/cargo-sources.json
