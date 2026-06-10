@@ -7,7 +7,7 @@
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use gtk::{gio, glib};
+use gtk::{gdk, gio, glib};
 
 use crate::document::Document;
 use crate::parser;
@@ -19,7 +19,7 @@ mod imp {
     use std::cell::{OnceCell, RefCell};
 
     #[derive(Debug, Default, CompositeTemplate)]
-    #[template(resource = "/io/github/swatchbook/Swatchbook/window.ui")]
+    #[template(resource = "/io/github/patricioaumedes/Swatchbook/window.ui")]
     pub struct SwatchbookWindow {
         #[template_child]
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
@@ -49,6 +49,9 @@ mod imp {
 
         /// Auto-save periodic timer.
         pub autosave_id: RefCell<Option<glib::SourceId>>,
+
+        /// Index of the keyboard-focused swatch on the canvas, if any.
+        pub focused_swatch: RefCell<Option<usize>>,
     }
 
     #[glib::object_subclass]
@@ -148,8 +151,9 @@ impl SwatchbookWindow {
         imp.canvas.set_draw_func(move |_area, cr, width, height| {
             let Some(win) = window_weak.upgrade() else { return };
             let items = win.imp().swatches.borrow();
+            let focused = *win.imp().focused_swatch.borrow();
             let dark = style_manager.is_dark();
-            renderer::render(cr, &items, width as f64, height as f64, dark);
+            renderer::render(cr, &items, width as f64, height as f64, dark, focused);
         });
 
         // Update canvas height whenever the allocated width changes so the
@@ -167,6 +171,61 @@ impl SwatchbookWindow {
         style_manager2.connect_dark_notify(move |_| {
             canvas.queue_draw();
         });
+
+        // Click anywhere on the canvas to grab keyboard focus.
+        let click = gtk::GestureClick::new();
+        let canvas_ref = imp.canvas.get();
+        click.connect_pressed(move |_, _, _, _| {
+            canvas_ref.grab_focus();
+        });
+        imp.canvas.set_focusable(true);
+        imp.canvas.add_controller(click);
+
+        // Keyboard navigation: arrows move the focus indicator, Enter copies the hex.
+        let key_ctrl = gtk::EventControllerKey::new();
+        let win_weak2 = self.downgrade();
+        key_ctrl.connect_key_pressed(move |_, key, _, _| {
+            let Some(win) = win_weak2.upgrade() else {
+                return glib::Propagation::Proceed;
+            };
+            let imp = win.imp();
+            let count = imp.swatches.borrow().len();
+            if count == 0 {
+                return glib::Propagation::Proceed;
+            }
+
+            match key {
+                gdk::Key::Right | gdk::Key::Down => {
+                    let next = imp
+                        .focused_swatch
+                        .borrow()
+                        .map_or(0, |i| (i + 1) % count);
+                    *imp.focused_swatch.borrow_mut() = Some(next);
+                    imp.canvas.queue_draw();
+                    glib::Propagation::Stop
+                }
+                gdk::Key::Left | gdk::Key::Up => {
+                    let prev = imp.focused_swatch.borrow().map_or(count - 1, |i| {
+                        if i == 0 { count - 1 } else { i - 1 }
+                    });
+                    *imp.focused_swatch.borrow_mut() = Some(prev);
+                    imp.canvas.queue_draw();
+                    glib::Propagation::Stop
+                }
+                gdk::Key::Return | gdk::Key::KP_Enter => {
+                    if let Some(idx) = *imp.focused_swatch.borrow() {
+                        if idx < count {
+                            let hex = imp.swatches.borrow()[idx].hex.clone();
+                            win.clipboard().set_text(&hex);
+                            win.show_toast(&format!("Copied {hex}"));
+                        }
+                    }
+                    glib::Propagation::Stop
+                }
+                _ => glib::Propagation::Proceed,
+            }
+        });
+        imp.canvas.add_controller(key_ctrl);
     }
 
     // ── Editor / live-preview pipeline ────────────────────────────────────────
@@ -228,7 +287,16 @@ impl SwatchbookWindow {
         let has_swatches = !items.is_empty();
         let canvas_w = self.imp().canvas.allocated_width().max(480) as f64;
         let canvas_h = renderer::content_height(items.len(), canvas_w).ceil() as i32;
+        let new_count = items.len();
         *self.imp().swatches.borrow_mut() = items;
+
+        // Keep focused index in bounds after a re-parse.
+        let mut focused = self.imp().focused_swatch.borrow_mut();
+        if let Some(idx) = *focused {
+            if idx >= new_count {
+                *focused = if new_count == 0 { None } else { Some(new_count - 1) };
+            }
+        }
         self.imp().canvas.set_content_height(canvas_h.max(360));
 
         if has_swatches {

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="swatchbook">
 
-  <schema id="io.github.swatchbook.Swatchbook" path="/io/github/swatchbook/Swatchbook/">
+  <schema id="io.github.patricioaumedes.Swatchbook" path="/io/github/patricioaumedes/Swatchbook/">
 
     <key name="window-width" type="i">
       <default>960</default>
@@ -29,6 +29,16 @@
       <description>
         Whether the main application window was maximized when it was last
         closed. When true, the window is re-maximized on startup.
+      </description>
+    </key>
+
+    <key name="language" type="s">
+      <default>''</default>
+      <summary>Display language</summary>
+      <description>
+        Language code override for the user interface (e.g. "en", "es", "fr",
+        "de"). An empty string follows the system locale. Takes effect after
+        restarting Swatchbook.
       </description>
     </key>
 

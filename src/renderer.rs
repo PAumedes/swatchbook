@@ -80,12 +80,14 @@ pub fn layout(count: usize, width: f64) -> Vec<SwatchRect> {
 /// Render a list of swatches into a Cairo context.
 ///
 /// `dark_mode` flips the label foreground for contrast.
+/// `focused` draws an accent-coloured focus ring around that swatch index.
 pub fn render(
     cr: &cairo::Context,
     items: &[SwatchItem],
     width: f64,
     _height: f64,
     dark_mode: bool,
+    focused: Option<usize>,
 ) {
     if items.is_empty() {
         return;
@@ -100,10 +102,18 @@ pub fn render(
 
     let rects = layout(items.len(), width);
 
-    for (item, rect) in items.iter().zip(rects.iter()) {
+    for (i, (item, rect)) in items.iter().zip(rects.iter()).enumerate() {
         let r = item.r as f64 / 255.0;
         let g = item.g as f64 / 255.0;
         let b = item.b as f64 / 255.0;
+
+        // Focus ring — drawn behind the swatch so the fill clips over the inner edge
+        if focused == Some(i) {
+            rounded_rect(cr, rect.x - 3.0, rect.y - 3.0, rect.w + 6.0, rect.h + 6.0, RADIUS + 3.0);
+            cr.set_source_rgba(0.208, 0.518, 0.894, 1.0); // #3584e4 GNOME accent blue
+            cr.set_line_width(3.0);
+            let _ = cr.stroke();
+        }
 
         // Swatch fill
         rounded_rect(cr, rect.x, rect.y, rect.w, rect.h, RADIUS);
@@ -142,7 +152,7 @@ pub fn export_png(items: &[SwatchItem], width: u32, height: u32, path: &std::pat
     cr.set_source_rgb(1.0, 1.0, 1.0);
     cr.paint().map_err(|e| format!("paint: {e}"))?;
 
-    render(&cr, items, width as f64, height as f64, false);
+    render(&cr, items, width as f64, height as f64, false, None);
 
     let mut file = std::fs::File::create(path).map_err(|e| format!("create file: {e}"))?;
     surf.write_to_png(&mut file).map_err(|e| format!("write png: {e}"))?;
@@ -158,7 +168,7 @@ pub fn export_svg(items: &[SwatchItem], width: u32, height: u32, path: &std::pat
     cr.set_source_rgb(1.0, 1.0, 1.0);
     cr.paint().map_err(|e| format!("paint: {e}"))?;
 
-    render(&cr, items, width as f64, height as f64, false);
+    render(&cr, items, width as f64, height as f64, false, None);
     Ok(())
 }
 

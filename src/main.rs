@@ -26,8 +26,10 @@ fn main() -> glib::ExitCode {
     }
 
     // -- Localization ------------------------------------------------------
-    // Initialise gettext so `_()`-equivalent lookups in the resources and the
-    // bundled translations resolve at runtime.
+    // Apply any stored language override *before* gettext is initialised so
+    // the LANGUAGE env var is already set when setlocale() reads it.
+    apply_language_preference();
+
     gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
     gettextrs::bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR)
         .expect("Unable to bind the gettext text domain");
@@ -49,7 +51,7 @@ fn main() -> glib::ExitCode {
     // -- Application -------------------------------------------------------
     let app = adw::Application::builder()
         .application_id(APP_ID)
-        .resource_base_path("/io/github/swatchbook/Swatchbook")
+        .resource_base_path("/io/github/patricioaumedes/Swatchbook")
         .flags(gio::ApplicationFlags::HANDLES_COMMAND_LINE)
         .build();
 
@@ -112,7 +114,11 @@ fn setup_gactions(app: &adw::Application) {
         .activate(|app: &adw::Application, _, _| build_window(app))
         .build();
 
-    app.add_action_entries([quit, about, new_canvas]);
+    let preferences = gio::ActionEntry::builder("preferences")
+        .activate(|app: &adw::Application, _, _| show_preferences(app))
+        .build();
+
+    app.add_action_entries([quit, about, new_canvas, preferences]);
 }
 
 /// Binds keyboard accelerators to their actions.
@@ -133,6 +139,75 @@ fn build_window(app: &adw::Application) {
     window.present();
 }
 
+/// Reads the stored language preference and, if set, exports it as the
+/// `LANGUAGE` environment variable so gettext picks it up during init.
+///
+/// This must be called before `setlocale()`.  We guard against missing schemas
+/// (dev builds before `meson install`) so the app never panics cold.
+fn apply_language_preference() {
+    let Some(source) = gio::SettingsSchemaSource::default() else { return };
+    if source.lookup(APP_ID, true).is_none() {
+        return;
+    }
+    let settings = gio::Settings::new(APP_ID);
+    let lang = settings.string("language");
+    if !lang.is_empty() {
+        std::env::set_var("LANGUAGE", lang.as_str());
+    }
+}
+
+/// Opens the Preferences window, currently limited to language selection.
+fn show_preferences(app: &adw::Application) {
+    const CODES: &[&str] = &["", "en", "es", "fr", "de"];
+
+    let settings = gio::Settings::new(APP_ID);
+    let current = settings.string("language");
+    let selected = CODES
+        .iter()
+        .position(|&c| c == current.as_str())
+        .unwrap_or(0) as u32;
+
+    let model = gtk::StringList::new(&[
+        "System Default",
+        "English",
+        "Español",
+        "Français",
+        "Deutsch",
+    ]);
+
+    let row = adw::ComboRow::builder()
+        .title("Language")
+        .model(&model)
+        .selected(selected)
+        .build();
+
+    row.connect_selected_notify(move |row| {
+        let code = CODES.get(row.selected() as usize).copied().unwrap_or("");
+        settings.set_string("language", code).ok();
+    });
+
+    let group = adw::PreferencesGroup::builder()
+        .title("Language")
+        .description("Restart Swatchbook to apply the new language")
+        .build();
+    group.add(&row);
+
+    let page = adw::PreferencesPage::new();
+    page.add(&group);
+
+    let prefs_win = adw::PreferencesWindow::builder()
+        .title("Preferences")
+        .modal(true)
+        .build();
+
+    if let Some(w) = app.active_window() {
+        prefs_win.set_transient_for(Some(&w));
+    }
+
+    prefs_win.add(&page);
+    prefs_win.present();
+}
+
 /// Presents the standard Adwaita about dialog.
 fn show_about(_app: &adw::Application) {
     let about = adw::AboutWindow::builder()
@@ -142,8 +217,8 @@ fn show_about(_app: &adw::Application) {
         .developers(["Patricio Aumedes"])
         .version(VERSION)
         .comments("A Markdown-powered style binder for GNOME.")
-        .website("https://github.com/PAumedes/swatchbook")
-        .issue_url("https://github.com/PAumedes/swatchbook/issues")
+        .website("https://github.com/patricioaumedes/swatchbook")
+        .issue_url("https://github.com/patricioaumedes/swatchbook/issues")
         .license_type(gtk::License::Gpl30)
         .copyright("© 2026 Patricio Aumedes")
         .build();

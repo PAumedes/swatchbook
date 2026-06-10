@@ -13,3 +13,8 @@ build-aux/signing.conf
 
 # Build artefacts
 /*.deb
+
+# Flatpak
+/_flatpak-build/
+/.flatpak-builder/
+/cargo-sources.json

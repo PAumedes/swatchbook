@@ -2,4 +2,4 @@ src/main.rs
 src/window.rs
 src/document.rs
 src/renderer.rs
-data/com.example.Swatchbook.desktop.in
+data/io.github.patricioaumedes.Swatchbook.desktop.in

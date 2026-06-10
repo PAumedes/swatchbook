@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.swatchbook.Swatchbook</id>
+  <id>io.github.patricioaumedes.Swatchbook</id>
 
   <name>Swatchbook</name>
 
@@ -34,18 +34,18 @@
     </p>
   </description>
 
-  <launchable type="desktop-id">io.github.swatchbook.Swatchbook.desktop</launchable>
+  <launchable type="desktop-id">io.github.patricioaumedes.Swatchbook.desktop</launchable>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
-  <developer id="io.github.swatchbook">
+  <developer id="io.github.patricioaumedes">
     <name>Patricio Aumedes</name>
   </developer>
 
-  <url type="homepage">https://github.com/PAumedes/swatchbook</url>
-  <url type="bugtracker">https://github.com/PAumedes/swatchbook/issues</url>
-  <url type="vcs-browser">https://github.com/PAumedes/swatchbook</url>
+  <url type="homepage">https://github.com/patricioaumedes/swatchbook</url>
+  <url type="bugtracker">https://github.com/patricioaumedes/swatchbook/issues</url>
+  <url type="vcs-browser">https://github.com/patricioaumedes/swatchbook</url>
 
   <supports>
     <control>keyboard</control>

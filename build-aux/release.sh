@@ -34,7 +34,7 @@ CARGO_TOML="$PROJECT_DIR/Cargo.toml"
 MESON_BUILD="$PROJECT_DIR/meson.build"
 CONTROL="$PROJECT_DIR/build-aux/control"
 CHANGELOG="$PROJECT_DIR/build-aux/changelog"
-METAINFO="$PROJECT_DIR/data/io.github.swatchbook.Swatchbook.metainfo.xml"
+METAINFO="$PROJECT_DIR/data/io.github.patricioaumedes.Swatchbook.metainfo.xml"
 
 # Target distribution codename for the Debian changelog stanza.
 DISTRO="noble"  # Ubuntu 24.04 LTS
@@ -154,11 +154,11 @@ if git -C "$PROJECT_DIR" rev-parse --git-dir &>/dev/null; then
     git -C "$PROJECT_DIR" push origin main
     git -C "$PROJECT_DIR" push origin "v$NEW_VERSION"
     success "Pushed — GitHub Actions is now building the .deb"
-    printf "\n  Watch the build: ${CYAN}gh run watch --repo PAumedes/swatchbook${RESET}\n"
+    printf "\n  Watch the build: ${CYAN}gh run watch --repo patricioaumedes/swatchbook${RESET}\n"
     printf "  Or:             ${CYAN}make release-watch${RESET}\n"
 else
     warn "Not a git repository — skipping commit, tag and push"
 fi
 
 printf "\n${BOLD}${GREEN}Release v%s triggered!${RESET}\n" "$NEW_VERSION"
-printf "The .deb will appear at: ${CYAN}https://github.com/PAumedes/swatchbook/releases/tag/v%s${RESET}\n\n" "$NEW_VERSION"
+printf "The .deb will appear at: ${CYAN}https://github.com/patricioaumedes/swatchbook/releases/tag/v%s${RESET}\n\n" "$NEW_VERSION"

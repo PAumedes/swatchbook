@@ -65,11 +65,11 @@ Each phase delivers a shippable increment. Phases build on each other.
 
 ## Phase 5 — Polish & Distribution ⏳
 
-- [ ] Flatpak manifest targeting the GNOME runtime
-- [ ] CI: `cargo clippy`, `cargo fmt --check`, `meson test` on every PR
+- [x] Flatpak manifest targeting the GNOME runtime (`io.github.patricioaumedes.Swatchbook.json` + `make flatpak`)
+- [x] CI: `cargo clippy`, `cargo fmt --check`, `meson test` on every PR (`.github/workflows/ci.yml`)
 - [ ] Accessibility audit with Accerciser
-- [ ] Keyboard navigation for the canvas (arrow keys, `Enter` to copy hex)
-- [ ] Additional translations (fr, de stubs)
+- [x] Keyboard navigation for the canvas (arrow keys move focus ring, `Enter` copies hex)
+- [x] Additional translations (fr, de stubs in `po/`)
 - [ ] GNOME Circle submission checklist
 
 ---

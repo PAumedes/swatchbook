@@ -138,6 +138,21 @@ lint: container-up ## Run cargo clippy + fmt check inside the container
 
 # ── Package ───────────────────────────────────────────────────────────────────
 
+##@ Flatpak
+
+.PHONY: flatpak-sources
+flatpak-sources: ## Generate cargo-sources.json from Cargo.lock (requires flatpak-cargo-generator.py)
+	@command -v flatpak-cargo-generator.py >/dev/null 2>&1 || \
+	    pip3 install --quiet toml aiohttp aiofiles
+	@python3 build-aux/flatpak-cargo-generator.py Cargo.lock -o cargo-sources.json
+	@printf '$(BOLD)$(GREEN)▶ cargo-sources.json generated$(RESET)\n'
+
+.PHONY: flatpak
+flatpak: cargo-sources.json ## Build a local Flatpak bundle (requires flatpak-builder)
+	@printf '$(BOLD)$(GREEN)▶ Building Flatpak...$(RESET)\n'
+	@flatpak-builder --user --install --force-clean _flatpak-build \
+	    io.github.patricioaumedes.Swatchbook.json
+
 ##@ Package
 
 .PHONY: deb
@@ -171,14 +186,14 @@ release-major: ## Bump major version (0.1.0 → 1.0.0), build .deb, tag git
 
 .PHONY: release-watch
 release-watch: ## Watch the latest GitHub Actions CI run in real time
-	@gh run watch --repo PAumedes/swatchbook
+	@gh run watch --repo patricioaumedes/swatchbook
 
 .PHONY: release-status
 release-status: ## Show recent GitHub Actions runs and release assets
 	@printf '$(BOLD)Recent CI runs:$(RESET)\n'
-	@gh run list --repo PAumedes/swatchbook --limit 5
+	@gh run list --repo patricioaumedes/swatchbook --limit 5
 	@printf '\n$(BOLD)Published releases:$(RESET)\n'
-	@gh release list --repo PAumedes/swatchbook --limit 5
+	@gh release list --repo patricioaumedes/swatchbook --limit 5
 
 .PHONY: changelog
 changelog: ## Show the full changelog

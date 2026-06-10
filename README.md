@@ -4,8 +4,8 @@ A Markdown-powered style binder for GNOME. Write colour palettes, typography spe
 
 Built with Rust, GTK4, Libadwaita, and Blueprint — looks and behaves like a first-party GNOME application.
 
-![License](https://img.shields.io/github/license/PAumedes/swatchbook)
-![Latest release](https://img.shields.io/github/v/release/PAumedes/swatchbook)
+![License](https://img.shields.io/github/license/patricioaumedes/swatchbook)
+![Latest release](https://img.shields.io/github/v/release/patricioaumedes/swatchbook)
 
 ---
 
@@ -24,7 +24,7 @@ Built with Rust, GTK4, Libadwaita, and Blueprint — looks and behaves like a fi
 
 ## Install
 
-Download the latest `.deb` from the [Releases page](https://github.com/PAumedes/swatchbook/releases) and install or upgrade with:
+Download the latest `.deb` from the [Releases page](https://github.com/patricioaumedes/swatchbook/releases) and install or upgrade with:
 
 ```bash
 sudo dpkg -i swatchbook-<version>-amd64.deb
@@ -155,9 +155,9 @@ swatchbook/
 │   ├── config.rs.in         ← build-time constants (app ID, version, paths)
 │   └── swatchbook.gresource.xml
 ├── data/
-│   ├── io.github.swatchbook.Swatchbook.desktop.in
-│   ├── io.github.swatchbook.Swatchbook.gschema.xml
-│   ├── io.github.swatchbook.Swatchbook.metainfo.xml
+│   ├── io.github.patricioaumedes.Swatchbook.desktop.in
+│   ├── io.github.patricioaumedes.Swatchbook.gschema.xml
+│   ├── io.github.patricioaumedes.Swatchbook.metainfo.xml
 │   └── icons/
 ├── po/                      ← gettext translations (es)
 ├── tests/                   ← integration tests (parser, renderer, document)
@@ -183,7 +183,7 @@ swatchbook/
 3. Run `make test` and `make lint` before submitting
 4. Open a pull request
 
-Please report bugs at the [issue tracker](https://github.com/PAumedes/swatchbook/issues).
+Please report bugs at the [issue tracker](https://github.com/patricioaumedes/swatchbook/issues).
 
 ---
 

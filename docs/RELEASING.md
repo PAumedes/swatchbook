@@ -67,7 +67,7 @@ Type `y` to confirm, and the script handles everything else.
 make release-watch    # live log stream in your terminal
 ```
 
-Or open [github.com/PAumedes/swatchbook/actions](https://github.com/PAumedes/swatchbook/actions) in a browser.
+Or open [github.com/patricioaumedes/swatchbook/actions](https://github.com/patricioaumedes/swatchbook/actions) in a browser.
 
 ### 4. Verify the release
 
@@ -75,7 +75,7 @@ Or open [github.com/PAumedes/swatchbook/actions](https://github.com/PAumedes/swa
 make release-status   # shows recent runs and published releases
 ```
 
-Or visit [github.com/PAumedes/swatchbook/releases](https://github.com/PAumedes/swatchbook/releases).
+Or visit [github.com/patricioaumedes/swatchbook/releases](https://github.com/patricioaumedes/swatchbook/releases).
 
 ---
 

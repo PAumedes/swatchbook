@@ -16,9 +16,9 @@ swatchbook/
 │   ├── config.rs.in         ← Meson→Rust build-time constants
 │   └── swatchbook.gresource.xml
 ├── data/
-│   ├── io.github.swatchbook.Swatchbook.desktop.in
-│   ├── io.github.swatchbook.Swatchbook.gschema.xml
-│   ├── io.github.swatchbook.Swatchbook.metainfo.xml
+│   ├── io.github.patricioaumedes.Swatchbook.desktop.in
+│   ├── io.github.patricioaumedes.Swatchbook.gschema.xml
+│   ├── io.github.patricioaumedes.Swatchbook.metainfo.xml
 │   ├── icons/hicolor/scalable/apps/    ← SVG app icon
 │   ├── icons/hicolor/symbolic/apps/    ← monochrome symbolic icon
 │   └── meson.build
@@ -131,7 +131,7 @@ Subclassing uses `#[glib::object_subclass]` + `CompositeTemplate`. All mutable s
 
 ## GSettings schema
 
-Schema ID: `io.github.swatchbook.Swatchbook`
+Schema ID: `io.github.patricioaumedes.Swatchbook`
 
 | Key | Type | Default | Description |
 |---|---|---|---|
