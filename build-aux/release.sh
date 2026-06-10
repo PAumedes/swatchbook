@@ -53,6 +53,13 @@ case "$BUMP_TYPE" in
     *)   die "Unknown bump type '$BUMP_TYPE'. Use: patch, minor, or major" ;;
 esac
 
+# ── Guard: no uncommitted changes ────────────────────────────────────────────
+if git -C "$PROJECT_DIR" rev-parse --git-dir &>/dev/null; then
+    if ! git -C "$PROJECT_DIR" diff --quiet || ! git -C "$PROJECT_DIR" diff --cached --quiet; then
+        die "You have uncommitted changes. Commit or stash them before releasing."
+    fi
+fi
+
 # ── Read current version ─────────────────────────────────────────────────────
 CURRENT=$(grep '^version' "$CARGO_TOML" | head -1 | grep -oP '[0-9]+\.[0-9]+\.[0-9]+')
 [[ -n "$CURRENT" ]] || die "Could not read version from Cargo.toml"

@@ -117,6 +117,8 @@ fn setup_accels(app: &adw::Application) {
     app.set_accels_for_action("win.open",        &["<Control>o"]);
     app.set_accels_for_action("win.save",        &["<Control>s"]);
     app.set_accels_for_action("win.save-as",     &["<Control><Shift>s"]);
+    app.set_accels_for_action("win.export-png",  &["<Control><Shift>e"]);
+    app.set_accels_for_action("win.copy-css",    &["<Control><Shift>c"]);
 }
 
 /// Constructs a fresh main window and presents it. Used both for normal

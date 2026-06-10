@@ -54,13 +54,12 @@ Each phase delivers a shippable increment. Phases build on each other.
 
 ---
 
-## Phase 4 — Export ⏳
+## Phase 4 — Export ✅
 
-- [ ] PNG export — render canvas to off-screen `cairo::ImageSurface` at 2× DPI
-- [ ] SVG export — render to `cairo::SvgSurface` with accessible `<title>` attributes
-- [ ] CSS variables — generate `--color-{slug}: #{hex};` block, copy to clipboard via `gdk::Clipboard`
-- [ ] Wire `app.export-png` to `Ctrl+Shift+E`
-- [ ] `Adw.Toast` notification on clipboard copy
+- [x] PNG export — render canvas to off-screen `cairo::ImageSurface` at 2× DPI (`win.export-png`, `Ctrl+Shift+E`)
+- [x] SVG export — render to `cairo::SvgSurface` (`win.export-svg`)
+- [x] CSS variables — generate `--color-{slug}: #{hex};` block, copy to clipboard (`win.copy-css`, `Ctrl+Shift+C`)
+- [x] `Adw.ToastOverlay` notification on export/copy success
 
 ---
 

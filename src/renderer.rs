@@ -115,6 +115,68 @@ pub fn render(
     }
 }
 
+// ── Export ───────────────────────────────────────────────────────────────────
+
+/// Render swatches to a PNG file at 2× resolution.
+pub fn export_png(items: &[SwatchItem], width: u32, height: u32, path: &std::path::Path) -> Result<(), String> {
+    let scale = 2.0_f64;
+    let surf = cairo::ImageSurface::create(
+        cairo::Format::Rgb24,
+        (width as f64 * scale) as i32,
+        (height as f64 * scale) as i32,
+    )
+    .map_err(|e| format!("create surface: {e}"))?;
+
+    let cr = cairo::Context::new(&surf).map_err(|e| format!("create context: {e}"))?;
+    cr.scale(scale, scale);
+    // White background
+    cr.set_source_rgb(1.0, 1.0, 1.0);
+    cr.paint().map_err(|e| format!("paint: {e}"))?;
+
+    render(&cr, items, width as f64, height as f64, false);
+
+    let mut file = std::fs::File::create(path).map_err(|e| format!("create file: {e}"))?;
+    surf.write_to_png(&mut file).map_err(|e| format!("write png: {e}"))?;
+    Ok(())
+}
+
+/// Render swatches to an SVG file.
+pub fn export_svg(items: &[SwatchItem], width: u32, height: u32, path: &std::path::Path) -> Result<(), String> {
+    let surf = cairo::SvgSurface::new(width as f64, height as f64, Some(path))
+        .map_err(|e| format!("create svg surface: {e}"))?;
+
+    let cr = cairo::Context::new(&surf).map_err(|e| format!("create context: {e}"))?;
+    cr.set_source_rgb(1.0, 1.0, 1.0);
+    cr.paint().map_err(|e| format!("paint: {e}"))?;
+
+    render(&cr, items, width as f64, height as f64, false);
+    Ok(())
+}
+
+/// Generate CSS custom properties from swatches.
+///
+/// Produces a block like:
+/// ```css
+/// :root {
+///   --color-primary: #3482e3;
+///   --color-success: #2ec27e;
+/// }
+/// ```
+pub fn to_css_variables(items: &[SwatchItem]) -> String {
+    let mut out = String::from(":root {\n");
+    for item in items {
+        let slug = item.name
+            .to_lowercase()
+            .chars()
+            .map(|c| if c.is_alphanumeric() { c } else { '-' })
+            .collect::<String>();
+        let slug = slug.trim_matches('-').to_string();
+        out.push_str(&format!("  --color-{slug}: {};\n", item.hex));
+    }
+    out.push('}');
+    out
+}
+
 fn draw_text(cr: &cairo::Context, text: &str, x: f64, y: f64, max_w: f64, size_pt: f64, bold: bool) {
     let layout = pc::create_layout(cr);
     let mut desc = pango::FontDescription::new();

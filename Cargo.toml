@@ -17,6 +17,7 @@ path = "src/lib.rs"
 [dependencies]
 gtk = { version = "0.9", package = "gtk4", features = ["v4_10"] }
 adw = { version = "0.7", package = "libadwaita", features = ["v1_4"] }
+cairo-rs = { version = "0.20", features = ["png", "svg"] }
 gettext-rs = { version = "0.7", features = ["gettext-system"] }
 pulldown-cmark = "0.12"
 pangocairo = "0.20"

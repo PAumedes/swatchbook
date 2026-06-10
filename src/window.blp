@@ -16,7 +16,8 @@ template $SwatchbookWindow: Adw.ApplicationWindow {
     }
   }
 
-  content: Adw.NavigationSplitView split_view {
+  content: Adw.ToastOverlay toast_overlay {
+    child: Adw.NavigationSplitView split_view {
     min-sidebar-width: 320;
     max-sidebar-width: 540;
     sidebar-width-fraction: 0.5;
@@ -95,6 +96,7 @@ template $SwatchbookWindow: Adw.ApplicationWindow {
       };
     };
   };
+  };
 }
 
 // --------------------------------------------------------------------------
@@ -120,6 +122,23 @@ menu primary_menu {
     item {
       label: _("Save _As…");
       action: "win.save-as";
+    }
+  }
+
+  section {
+    item {
+      label: _("Export as _PNG…");
+      action: "win.export-png";
+    }
+
+    item {
+      label: _("Export as _SVG…");
+      action: "win.export-svg";
+    }
+
+    item {
+      label: _("Copy CSS _Variables");
+      action: "win.copy-css";
     }
   }
 

@@ -22,6 +22,8 @@ mod imp {
     #[template(resource = "/io/github/swatchbook/Swatchbook/window.ui")]
     pub struct SwatchbookWindow {
         #[template_child]
+        pub toast_overlay: TemplateChild<adw::ToastOverlay>,
+        #[template_child]
         pub split_view: TemplateChild<adw::NavigationSplitView>,
         #[template_child]
         pub editor: TemplateChild<gtk::TextView>,
@@ -233,8 +235,17 @@ impl SwatchbookWindow {
         let save_as = gio::ActionEntry::builder("save-as")
             .activate(|win: &Self, _, _| win.action_save_as())
             .build();
+        let export_png = gio::ActionEntry::builder("export-png")
+            .activate(|win: &Self, _, _| win.action_export_png())
+            .build();
+        let export_svg = gio::ActionEntry::builder("export-svg")
+            .activate(|win: &Self, _, _| win.action_export_svg())
+            .build();
+        let copy_css = gio::ActionEntry::builder("copy-css")
+            .activate(|win: &Self, _, _| win.action_copy_css())
+            .build();
 
-        self.add_action_entries([open, save, save_as]);
+        self.add_action_entries([open, save, save_as, export_png, export_svg, copy_css]);
     }
 
     fn action_open(&self) {
@@ -321,6 +332,94 @@ impl SwatchbookWindow {
                 }
             }
         });
+    }
+
+    fn canvas_export_size(&self) -> (u32, u32) {
+        let w = self.imp().canvas.allocated_width().max(480) as u32;
+        let h = self.imp().canvas.allocated_height().max(360) as u32;
+        (w, h)
+    }
+
+    fn show_toast(&self, message: &str) {
+        self.imp().toast_overlay.add_toast(adw::Toast::new(message));
+    }
+
+    fn action_export_png(&self) {
+        if self.imp().swatches.borrow().is_empty() {
+            self.show_toast("No swatches to export.");
+            return;
+        }
+
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some("PNG image"));
+        filter.add_pattern("*.png");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+
+        let dialog = gtk::FileDialog::builder()
+            .title("Export as PNG")
+            .filters(&filters)
+            .initial_name("swatchbook.png")
+            .build();
+
+        let win = self.clone();
+        dialog.save(Some(self), gio::Cancellable::NONE, move |result| {
+            if let Ok(file) = result {
+                if let Some(path) = file.path() {
+                    let items = win.imp().swatches.borrow().clone();
+                    let (w, h) = win.canvas_export_size();
+                    match renderer::export_png(&items, w, h, &path) {
+                        Ok(()) => win.show_toast("PNG exported."),
+                        Err(e) => eprintln!("swatchbook: PNG export failed: {e}"),
+                    }
+                }
+            }
+        });
+    }
+
+    fn action_export_svg(&self) {
+        if self.imp().swatches.borrow().is_empty() {
+            self.show_toast("No swatches to export.");
+            return;
+        }
+
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some("SVG image"));
+        filter.add_pattern("*.svg");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+
+        let dialog = gtk::FileDialog::builder()
+            .title("Export as SVG")
+            .filters(&filters)
+            .initial_name("swatchbook.svg")
+            .build();
+
+        let win = self.clone();
+        dialog.save(Some(self), gio::Cancellable::NONE, move |result| {
+            if let Ok(file) = result {
+                if let Some(path) = file.path() {
+                    let items = win.imp().swatches.borrow().clone();
+                    let (w, h) = win.canvas_export_size();
+                    match renderer::export_svg(&items, w, h, &path) {
+                        Ok(()) => win.show_toast("SVG exported."),
+                        Err(e) => eprintln!("swatchbook: SVG export failed: {e}"),
+                    }
+                }
+            }
+        });
+    }
+
+    fn action_copy_css(&self) {
+        let items = self.imp().swatches.borrow();
+        if items.is_empty() {
+            self.show_toast("No swatches to copy.");
+            return;
+        }
+        let css = renderer::to_css_variables(&items);
+        drop(items);
+        self.clipboard().set_text(&css);
+        self.show_toast("CSS variables copied to clipboard.");
     }
 
     fn update_title(&self) {
