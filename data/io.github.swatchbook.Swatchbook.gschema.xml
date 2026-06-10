@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="swatchbook">
 
-  <schema id="com.example.Swatchbook" path="/com/example/Swatchbook/">
+  <schema id="io.github.swatchbook.Swatchbook" path="/io/github/swatchbook/Swatchbook/">
 
     <key name="window-width" type="i">
       <default>960</default>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/com/example/Swatchbook/">
+  <gresource prefix="/io/github/swatchbook/Swatchbook/">
     <!--
       window.ui is produced by blueprint-compiler from window.blp at build time
       (see src/meson.build), so it is resolved against the build directory.

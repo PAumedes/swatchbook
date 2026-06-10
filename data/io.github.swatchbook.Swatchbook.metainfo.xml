@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.swatchbook.Swatchbook</id>
+
+  <name>Swatchbook</name>
+  <name xml:lang="es">Swatchbook</name>
+
+  <summary>Markdown-powered style binder</summary>
+  <summary xml:lang="es">Catálogo de estilos basado en Markdown</summary>
+
+  <description>
+    <p>
+      Swatchbook lets you write colour palettes, typography specs, and design
+      tokens in plain Markdown and renders them as an interactive, shareable
+      swatch canvas — right inside a native GNOME window.
+    </p>
+    <p>
+      Type a colour name and hex value in the editor; the canvas updates live.
+      Save your binder as a plain <code>.md</code> file you can open in any
+      editor or share with your team.
+    </p>
+    <ul>
+      <li>Live Markdown-to-swatch preview with 150 ms debounce</li>
+      <li>Supports <code>#rrggbb</code>, <code>#rgb</code>, <code>rgb()</code>, and CSS named colours</li>
+      <li>Sections map to headed groups of swatches</li>
+      <li>Open, save, and save-as with native file dialogs</li>
+      <li>Auto-save every 30 seconds with crash recovery</li>
+      <li>Dark mode — follows the system colour scheme automatically</li>
+      <li>Responsive layout — collapses to single-column on narrow displays</li>
+    </ul>
+    <p xml:lang="es">
+      Swatchbook te permite escribir paletas de colores, especificaciones
+      tipográficas y tokens de diseño en Markdown simple, y los renderiza como
+      un lienzo interactivo de muestras dentro de una ventana nativa de GNOME.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.swatchbook.Swatchbook.desktop</launchable>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <developer id="io.github.swatchbook">
+    <name>The Swatchbook Authors</name>
+  </developer>
+
+  <url type="homepage">https://github.com/swatchbook/swatchbook</url>
+  <url type="bugtracker">https://github.com/swatchbook/swatchbook/issues</url>
+  <url type="vcs-browser">https://github.com/swatchbook/swatchbook</url>
+
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+
+  <recommends>
+    <display_length compare="ge">768</display_length>
+  </recommends>
+
+  <categories>
+    <category>Graphics</category>
+    <category>Utility</category>
+    <category>TextEditor</category>
+    <category>GTK</category>
+  </categories>
+
+  <keywords>
+    <keyword>Markdown</keyword>
+    <keyword>colour</keyword>
+    <keyword>palette</keyword>
+    <keyword>swatch</keyword>
+    <keyword>design</keyword>
+    <keyword>tokens</keyword>
+    <keyword translate="no">CSS</keyword>
+    <keyword xml:lang="es">color</keyword>
+    <keyword xml:lang="es">paleta</keyword>
+    <keyword xml:lang="es">diseño</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1"/>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#4a90d9</color>
+    <color type="primary" scheme_preference="dark">#1e3a5f</color>
+  </branding>
+
+  <releases>
+    <release version="0.2.0" date="2026-06-09">
+      <description>
+        <p>All phases completed: live Markdown parsing, canvas renderer,
+        file I/O, auto-save, Spanish translation, and release automation.</p>
+      </description>
+    </release>
+    <release version="0.1.0" date="2026-06-09">
+      <description>
+        <p>Initial release of the Markdown style binder.</p>
+      </description>
+    </release>
+  </releases>
+
+</component>

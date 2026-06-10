@@ -18,7 +18,7 @@ gnome = import('gnome')
 # ----------------------------------------------------------------------------
 # Core identity
 # ----------------------------------------------------------------------------
-base_id         = 'com.example.Swatchbook'
+base_id         = 'io.github.swatchbook.Swatchbook'
 gettext_package = meson.project_name()
 version         = meson.project_version()
 

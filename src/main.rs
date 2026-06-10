@@ -42,7 +42,7 @@ fn main() -> glib::ExitCode {
     // -- Application -------------------------------------------------------
     let app = adw::Application::builder()
         .application_id(APP_ID)
-        .resource_base_path("/com/example/Swatchbook")
+        .resource_base_path("/io/github/swatchbook/Swatchbook")
         .flags(gio::ApplicationFlags::HANDLES_COMMAND_LINE)
         .build();
 
@@ -129,7 +129,7 @@ fn show_about(app: &adw::Application) {
         .developer_name("The Swatchbook Authors")
         .version(VERSION)
         .comments("A Markdown-powered style binder for GNOME.")
-        .website("https://example.com/swatchbook")
+        .website("https://github.com/swatchbook/swatchbook")
         .license_type(gtk::License::Gpl30)
         .copyright("© 2026 The Swatchbook Authors")
         .build();

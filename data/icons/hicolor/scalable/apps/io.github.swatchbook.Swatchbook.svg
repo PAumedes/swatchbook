@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <!-- App background gradient — deep blue-purple, GNOME-style -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#2d1b4e"/>
+    </linearGradient>
+
+    <!-- Subtle inner shadow for depth -->
+    <filter id="inner-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+      <feOffset dx="0" dy="2" result="offset"/>
+      <feComposite in="offset" in2="SourceAlpha" operator="in" result="shadow"/>
+      <feFlood flood-color="#000" flood-opacity="0.25" result="color"/>
+      <feComposite in="color" in2="shadow" operator="in" result="colored-shadow"/>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="colored-shadow"/>
+      </feMerge>
+    </filter>
+
+    <!-- Swatch drop shadow -->
+    <filter id="swatch-shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+
+    <!-- Clip to swatch shape -->
+    <clipPath id="swatch-clip-0"><rect x="0" y="0" width="36" height="36" rx="7"/></clipPath>
+    <clipPath id="swatch-clip-1"><rect x="0" y="0" width="36" height="36" rx="7"/></clipPath>
+    <clipPath id="swatch-clip-2"><rect x="0" y="0" width="36" height="36" rx="7"/></clipPath>
+    <clipPath id="swatch-clip-3"><rect x="0" y="0" width="36" height="36" rx="7"/></clipPath>
+  </defs>
+
+  <!-- App icon background — rounded square per GNOME HIG -->
+  <rect x="0" y="0" width="128" height="128" rx="22" fill="url(#bg)"/>
+
+  <!-- Subtle highlight rim at top -->
+  <rect x="0" y="0" width="128" height="64" rx="22" fill="white" opacity="0.04"/>
+
+  <!-- 2×2 swatch grid, centred in the icon -->
+  <!-- Swatch size: 40×40, gap: 8, total grid: 88×88, offset: (20, 20) -->
+
+  <!-- Top-left: vivid blue -->
+  <g transform="translate(20, 20)" filter="url(#swatch-shadow)">
+    <rect x="0" y="0" width="40" height="40" rx="8" fill="#4a90d9"/>
+    <!-- Subtle gloss highlight -->
+    <rect x="0" y="0" width="40" height="18" rx="8" fill="white" opacity="0.15" clip-path="url(#swatch-clip-0)"/>
+  </g>
+
+  <!-- Top-right: warm amber -->
+  <g transform="translate(68, 20)" filter="url(#swatch-shadow)">
+    <rect x="0" y="0" width="40" height="40" rx="8" fill="#e8a020"/>
+    <rect x="0" y="0" width="40" height="18" rx="8" fill="white" opacity="0.15" clip-path="url(#swatch-clip-1)"/>
+  </g>
+
+  <!-- Bottom-left: fresh green -->
+  <g transform="translate(20, 68)" filter="url(#swatch-shadow)">
+    <rect x="0" y="0" width="40" height="40" rx="8" fill="#2ec27e"/>
+    <rect x="0" y="0" width="40" height="18" rx="8" fill="white" opacity="0.15" clip-path="url(#swatch-clip-2)"/>
+  </g>
+
+  <!-- Bottom-right: soft coral/pink -->
+  <g transform="translate(68, 68)" filter="url(#swatch-shadow)">
+    <rect x="0" y="0" width="40" height="40" rx="8" fill="#e05c73"/>
+    <rect x="0" y="0" width="40" height="18" rx="8" fill="white" opacity="0.15" clip-path="url(#swatch-clip-3)"/>
+  </g>
+
+  <!-- Small colour-picker dot in the centre crossing — ties the swatches together -->
+  <circle cx="64" cy="64" r="6" fill="white" opacity="0.90"/>
+  <circle cx="64" cy="64" r="3.5" fill="#2d1b4e"/>
+</svg>

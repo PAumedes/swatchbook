@@ -19,7 +19,7 @@ mod imp {
     use std::cell::{OnceCell, RefCell};
 
     #[derive(Debug, Default, CompositeTemplate)]
-    #[template(resource = "/com/example/Swatchbook/window.ui")]
+    #[template(resource = "/io/github/swatchbook/Swatchbook/window.ui")]
     pub struct SwatchbookWindow {
         #[template_child]
         pub split_view: TemplateChild<adw::NavigationSplitView>,

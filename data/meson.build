@@ -1,8 +1,5 @@
 # ----------------------------------------------------------------------------
 # Desktop launcher
-#
-# The .desktop.in carries gettext-translatable keys; i18n.merge_file() folds in
-# the translations from po/ and emits the final, validated .desktop file.
 # ----------------------------------------------------------------------------
 desktop_file = i18n.merge_file(
   input: '@0@.desktop.in'.format(base_id),
@@ -24,6 +21,40 @@ if desktop_file_validate.found()
 endif
 
 # ----------------------------------------------------------------------------
+# AppStream metainfo
+# ----------------------------------------------------------------------------
+metainfo_file = i18n.merge_file(
+  input: '@0@.metainfo.xml'.format(base_id),
+  output: '@0@.metainfo.xml'.format(application_id),
+  po_dir: meson.project_source_root() / 'po',
+  install: true,
+  install_dir: datadir / 'metainfo',
+)
+
+appstreamcli = find_program('appstreamcli', required: false)
+if appstreamcli.found()
+  test(
+    'validate-metainfo',
+    appstreamcli,
+    args: ['validate', '--no-net', metainfo_file.full_path()],
+    depends: metainfo_file,
+  )
+endif
+
+# ----------------------------------------------------------------------------
+# Application icon
+# ----------------------------------------------------------------------------
+install_data(
+  'icons/hicolor/scalable/apps/@0@.svg'.format(base_id),
+  install_dir: datadir / 'icons' / 'hicolor' / 'scalable' / 'apps',
+)
+
+install_data(
+  'icons/hicolor/symbolic/apps/@0@-symbolic.svg'.format(base_id),
+  install_dir: datadir / 'icons' / 'hicolor' / 'symbolic' / 'apps',
+)
+
+# ----------------------------------------------------------------------------
 # GSettings schema
 # ----------------------------------------------------------------------------
 install_data(
@@ -31,7 +62,6 @@ install_data(
   install_dir: datadir / 'glib-2.0' / 'schemas',
 )
 
-# Validate the schema in-tree so a malformed key fails `meson test` early.
 test(
   'validate-gschema',
   glib_compile_schemas,
