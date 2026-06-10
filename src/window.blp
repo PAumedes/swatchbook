@@ -32,13 +32,6 @@ template $SwatchbookWindow: Adw.ApplicationWindow {
         [top]
         Adw.HeaderBar {
           [start]
-          Button {
-            action-name: "win.open";
-            icon-name: "document-open-symbolic";
-            tooltip-text: _("Open file (Ctrl+O)");
-          }
-
-          [end]
           MenuButton {
             primary: true;
             icon-name: "open-menu-symbolic";
@@ -79,31 +72,15 @@ template $SwatchbookWindow: Adw.ApplicationWindow {
 
       child: Adw.ToolbarView {
         [top]
-        Adw.HeaderBar {
-          [start]
-          Button {
-            action-name: "win.save";
-            icon-name: "document-save-symbolic";
-            tooltip-text: _("Save (Ctrl+S)");
-          }
-
-          [end]
-          Button {
-            action-name: "win.save-as";
-            icon-name: "document-save-as-symbolic";
-            tooltip-text: _("Save As (Ctrl+Shift+S)");
-          }
-        }
+        Adw.HeaderBar {}
 
         content: Stack canvas_stack {
-          // Shown when no swatches have been parsed yet
           Adw.StatusPage status_page {
             icon-name: "applications-graphics-symbolic";
             title: _("Interactive Canvas");
             description: _("Type a colour in the editor — e.g.  - **Red** — `#e53935`");
           }
 
-          // The live drawing area — shown as soon as swatches are parsed
           DrawingArea canvas {
             hexpand: true;
             vexpand: true;

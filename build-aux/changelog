@@ -1,3 +1,11 @@
+swatchbook (0.3.1) 26.04; urgency=medium
+
+  * Fix preview blank on launch: call reparse() immediately after seeding text
+  * Clean up header bars: hamburger on the left, remove Open/Save icon buttons
+  * File actions available via menu and keyboard shortcuts only
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Tue, 09 Jun 2026 23:45:28 -0300
+
 swatchbook (0.3.0) 26.04; urgency=medium
 
   * Fix live preview: canvas and status page are now Stack siblings, not parent/child

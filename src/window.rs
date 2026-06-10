@@ -365,15 +365,16 @@ impl SwatchbookWindow {
         if !buf.text(&start, &end, false).is_empty() {
             return;
         }
-        buf.set_text(
-            "# Swatchbook\n\n\
+        let text = "# Swatchbook\n\n\
              A *Markdown-powered* style binder.\n\n\
              ## Palette\n\n\
              - **Primary** — `#3482E3`\n\
              - **Success** — `#2EC27E`\n\
              - **Warning** — `#F5C211`\n\
              - **Error** — `#E53935`\n\
-             - **Purple** — `#9C27B0`\n",
-        );
+             - **Purple** — `#9C27B0`\n";
+        buf.set_text(text);
+        // Render immediately — don't wait for the debounce timer.
+        self.reparse(text);
     }
 }
