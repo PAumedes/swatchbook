@@ -181,14 +181,37 @@ fn show_preferences(app: &adw::Application) {
         .selected(selected)
         .build();
 
+    let app_clone = app.clone();
     row.connect_selected_notify(move |row| {
         let code = CODES.get(row.selected() as usize).copied().unwrap_or("");
+        // Guard against the initial notify that fires when selected is set.
+        if code == settings.string("language").as_str() {
+            return;
+        }
         settings.set_string("language", code).ok();
+
+        // Update the locale env var and re-initialise gettext so subsequent
+        // widget construction picks up the new translations.
+        if code.is_empty() {
+            std::env::remove_var("LANGUAGE");
+        } else {
+            std::env::set_var("LANGUAGE", code);
+        }
+        gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
+        let _ = gettextrs::bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+        let _ = gettextrs::bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+        let _ = gettextrs::textdomain(GETTEXT_PACKAGE);
+
+        // Close every window (including this prefs window) then open a fresh
+        // main window whose widgets will use the new locale.
+        for window in app_clone.windows() {
+            window.close();
+        }
+        build_window(&app_clone);
     });
 
     let group = adw::PreferencesGroup::builder()
         .title("Language")
-        .description("Restart Swatchbook to apply the new language")
         .build();
     group.add(&row);
 

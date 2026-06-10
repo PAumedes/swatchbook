@@ -19,8 +19,9 @@
         "--socket=fallback-x11",
         "--socket=wayland",
         "--device=dri",
-        "--filesystem=home",
-        "--talk-name=org.a11y.Bus"
+        "--talk-name=org.a11y.Bus",
+        "--talk-name=org.gtk.vfs.*",
+        "--filesystem=xdg-run/gvfsd"
     ],
     "cleanup": [
         "/include",

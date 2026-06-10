@@ -42,6 +42,15 @@ if appstreamcli.found()
 endif
 
 # ----------------------------------------------------------------------------
+# Screenshots (installed for local AppStream tooling; also referenced by the
+# metainfo URL which points to the raw GitHub copy)
+# ----------------------------------------------------------------------------
+install_data(
+  'screenshots/main.png',
+  install_dir: datadir / 'metainfo' / 'screenshots' / application_id,
+)
+
+# ----------------------------------------------------------------------------
 # Application icon
 # ----------------------------------------------------------------------------
 install_data(
