@@ -1,7 +1,7 @@
 project(
   'swatchbook',
   'rust',
-  version: '0.3.4',
+  version: '0.4.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.0.0',
   default_options: [
