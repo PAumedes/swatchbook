@@ -1,3 +1,11 @@
+swatchbook (0.3.0) 26.04; urgency=medium
+
+  * Fix live preview: canvas and status page are now Stack siblings, not parent/child
+  * Add Open/Save/Save-As buttons to header bars
+  * Add Open/Save/Save-As to the primary menu
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Tue, 09 Jun 2026 23:36:14 -0300
+
 swatchbook (0.2.3) 26.04; urgency=medium
 
   * Remove distrobox swatchbook-dev desktop entry collision

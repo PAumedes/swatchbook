@@ -26,11 +26,11 @@ mod imp {
         #[template_child]
         pub editor: TemplateChild<gtk::TextView>,
         #[template_child]
+        pub canvas_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
         pub status_page: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub canvas: TemplateChild<gtk::DrawingArea>,
-        #[template_child]
-        pub render_toggle: TemplateChild<gtk::ToggleButton>,
 
         pub settings: OnceCell<gio::Settings>,
 
@@ -206,10 +206,13 @@ impl SwatchbookWindow {
 
         let has_swatches = !items.is_empty();
         *self.imp().swatches.borrow_mut() = items;
-        self.imp().canvas.queue_draw();
 
-        self.imp().status_page.set_visible(!has_swatches);
-        self.imp().canvas.set_visible(has_swatches);
+        if has_swatches {
+            self.imp().canvas_stack.set_visible_child(&*self.imp().canvas);
+            self.imp().canvas.queue_draw();
+        } else {
+            self.imp().canvas_stack.set_visible_child(&*self.imp().status_page);
+        }
     }
 
     // ── Window-scoped actions (open / save / save-as) ─────────────────────────
