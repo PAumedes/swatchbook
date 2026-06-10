@@ -161,7 +161,7 @@ function main(): ExitCode {
 ```rust
 let app = adw::Application::builder()
     .application_id(APP_ID)
-    .resource_base_path("/com/example/Swatchbook")
+    .resource_base_path("/io/github/swatchbook/Swatchbook")
     .flags(gio::ApplicationFlags::HANDLES_COMMAND_LINE)
     .build();
 ```

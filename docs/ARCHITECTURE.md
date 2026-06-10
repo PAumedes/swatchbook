@@ -1,66 +1,108 @@
-# Swatchbook — Architecture Summary
+# Swatchbook — Architecture
 
-## Project Structure
+## Project structure
 
 ```
 swatchbook/
-├── meson.build              ← top-level: project, deps, tooling, profiles
-├── meson_options.txt        ← 'profile' combo (default | development)
-├── Cargo.toml               ← crate manifest + gtk4/adw bindings
-├── .gitignore               ← ignores generated config.rs & builds
-├── build-aux/
-│   └── cargo.sh             ← cargo↔meson build shim
+├── src/
+│   ├── main.rs              ← process bootstrap, GActions, keyboard shortcuts
+│   ├── window.rs            ← SwatchbookWindow subclass, editor, canvas, file I/O
+│   ├── window.blp           ← Blueprint UI layout
+│   ├── parser.rs            ← Markdown → Document (pulldown-cmark)
+│   ├── token.rs             ← colour value extraction (#hex, rgb(), named)
+│   ├── renderer.rs          ← swatch layout engine + Cairo/Pango drawing
+│   ├── document.rs          ← file I/O, auto-save, crash recovery
+│   ├── lib.rs               ← crate root (exposes modules for integration tests)
+│   ├── config.rs.in         ← Meson→Rust build-time constants
+│   └── swatchbook.gresource.xml
 ├── data/
-│   ├── com.example.Swatchbook.desktop.in
-│   ├── com.example.Swatchbook.gschema.xml
+│   ├── io.github.swatchbook.Swatchbook.desktop.in
+│   ├── io.github.swatchbook.Swatchbook.gschema.xml
+│   ├── io.github.swatchbook.Swatchbook.metainfo.xml
+│   ├── icons/hicolor/scalable/apps/    ← SVG app icon
+│   ├── icons/hicolor/symbolic/apps/    ← monochrome symbolic icon
 │   └── meson.build
-└── src/
-    ├── main.rs
-    ├── window.rs
-    ├── window.blp
-    ├── config.rs.in         ← Meson→Rust config template
-    ├── swatchbook.gresource.xml
-    └── meson.build
+├── po/
+│   ├── es.po                ← Spanish translation
+│   ├── POTFILES
+│   ├── LINGUAS
+│   └── meson.build
+├── tests/
+│   ├── parser_tests.rs
+│   ├── renderer_tests.rs
+│   └── document_tests.rs
+├── build-aux/
+│   ├── incus-build.sh       ← container build + .deb packaging
+│   ├── release.sh           ← version bump + changelog + tag + push
+│   ├── make-completion.bash ← bash/zsh tab-completion for make targets
+│   ├── cargo.sh             ← Cargo↔Meson build bridge
+│   ├── control              ← Debian package metadata
+│   ├── changelog            ← Debian-format changelog
+│   └── copyright
+├── .github/workflows/
+│   └── release.yml          ← CI: build .deb + publish GitHub Release on tag push
+├── docs/
+├── Makefile
+├── Cargo.toml
+└── meson.build
 ```
 
-## Key Dependencies
+---
 
-| Crate / Library | Version Floor | Purpose |
+## Key dependencies
+
+| Crate / Library | Version | Purpose |
 |---|---|---|
 | `gtk4` (`gtk` alias) | `v4_10` | Widget toolkit |
 | `libadwaita` (`adw` alias) | `v1_4` | GNOME HIG components |
 | `gettext-rs` | `0.7` | Runtime localisation |
-| `glib-2.0` pkg-config | `2.74` | GLib core |
-| `libadwaita-1` pkg-config | `1.4` | Unlocks `Adw.NavigationSplitView` |
+| `pulldown-cmark` | `0.12` | Markdown parsing |
+| `pangocairo` | `0.20` | Text layout in Cairo draw functions |
 
-## Why Four Files Were Added Beyond the Requested Tree
+---
 
-| File | Reason |
-|---|---|
-| `Cargo.toml` | Meson's `'rust'` language drives `cargo`, which needs a manifest |
-| `build-aux/cargo.sh` | `custom_target` runs one program; can't express `cargo build && cp` inline |
-| `src/config.rs.in` | Only clean way to inject install paths (`PKGDATADIR`, `LOCALEDIR`) into Rust |
-| `src/swatchbook.gresource.xml` | Blueprint UI must be bundled as a GResource for `#[template(resource = …)]` |
+## Data flow
 
-## UI Layout
+```
+GtkTextBuffer (editor)
+       │  changed signal (150 ms debounce)
+       ▼
+   parser::parse()          pulldown-cmark → Document { sections }
+       │
+       ▼
+   token::extract_color()   "red" / "#4a90d9" / "rgb()" → ColorValue
+       │
+       ▼
+   renderer::layout()       pure geometry → Vec<SwatchRect>
+       │
+       ▼
+   renderer::render()       Cairo + Pango → pixels on DrawingArea
+```
+
+The parser, token, and renderer modules are pure functions with no GTK imports — they can be unit-tested without a display.
+
+---
+
+## UI layout
 
 ```
 Adw.ApplicationWindow
 └── Adw.NavigationSplitView  (collapses at <640sp via Adw.Breakpoint)
     ├── sidebar: Adw.NavigationPage "Markdown"
     │   └── Adw.ToolbarView
-    │       ├── [top] Adw.HeaderBar  (New Canvas button, Main Menu)
+    │       ├── [top] Adw.HeaderBar  (menu button)
     │       └── ScrolledWindow → Gtk.TextView  (Markdown editor)
     └── content: Adw.NavigationPage "Preview"
         └── Adw.ToolbarView
-            ├── [top] Adw.HeaderBar  (Toggle Rendered Preview button)
-            └── Adw.StatusPage
-                └── Frame → Gtk.DrawingArea  (swatch canvas)
+            ├── [top] Adw.HeaderBar
+            └── stack
+                ├── Adw.StatusPage   (shown when no swatches parsed)
+                └── Gtk.DrawingArea  (swatch canvas)
 ```
 
-Light/Dark mode is handled automatically by Adwaita's header and toolbar widgets — no hardcoded colours in the layout.
+---
 
-## GObject Class Hierarchy
+## GObject class hierarchy
 
 ```
 SwatchbookWindow
@@ -68,44 +110,63 @@ SwatchbookWindow
   extends  gtk::ApplicationWindow
   extends  gtk::Window
   extends  gtk::Widget
-  implements  gio::ActionGroup, gio::ActionMap, gtk::Accessible,
-              gtk::Buildable, gtk::ConstraintTarget, gtk::Native,
-              gtk::Root, gtk::ShortcutManager
 ```
 
-Subclassing uses `#[glib::object_subclass]` + `CompositeTemplate` from the `adw::subclass::prelude`. All state lives in `imp::SwatchbookWindow` (the `ObjectSubclass` inner type).
+Subclassing uses `#[glib::object_subclass]` + `CompositeTemplate`. All mutable state lives in `imp::SwatchbookWindow` behind `RefCell` (required because GObject can't hold `&mut` references across signal boundaries).
 
-## Application Actions
+---
 
-| Action | Accel | Description |
-|---|---|---|
-| `app.quit` | `Ctrl+Q` | Terminate the process |
-| `app.new-canvas` | `Ctrl+N` | Open a fresh window |
-| `app.about` | — | Show `Adw.AboutWindow` |
+## Application actions
 
-The `--new-canvas` CLI flag is forwarded to the running primary instance via `connect_command_line`, which activates `app.new-canvas` in-process instead of spawning a duplicate.
-
-## GSettings Schema Keys
-
-| Key | Type | Default | Range |
+| Action | Scope | Shortcut | Description |
 |---|---|---|---|
-| `window-width` | `i` | `960` | `360–32767` |
-| `window-height` | `i` | `640` | `294–32767` |
-| `is-maximized` | `b` | `false` | — |
+| `app.quit` | app | `Ctrl+Q` | Terminate the process |
+| `app.new-canvas` | app | `Ctrl+N` | Open a fresh window |
+| `app.about` | app | — | Show the about dialog |
+| `win.open` | window | `Ctrl+O` | Open a `.md` file |
+| `win.save` | window | `Ctrl+S` | Save current file |
+| `win.save-as` | window | `Ctrl+Shift+S` | Save to a new path |
 
-Persistence: `restore_window_state()` reads on `constructed`, `save_window_state()` writes in `WindowImpl::close_request`.
+---
 
-## Build Profiles
+## GSettings schema
+
+Schema ID: `io.github.swatchbook.Swatchbook`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `window-width` | `i` | `960` | Saved window width |
+| `window-height` | `i` | `640` | Saved window height |
+| `is-maximized` | `b` | `false` | Saved maximised state |
+
+State is restored in `constructed()` and saved in `close_request()`.
+
+---
+
+## Build system
+
+Meson orchestrates the full build; Cargo handles Rust compilation only.
+
+```
+meson setup _build
+    │
+    ├── blueprint-compiler  →  window.ui  (bundled into .gresource)
+    ├── glib-compile-resources  →  swatchbook.gresource
+    ├── cargo build --release  →  swatchbook binary
+    ├── msgfmt  →  es/LC_MESSAGES/swatchbook.mo
+    ├── i18n.merge_file  →  .desktop, .metainfo.xml
+    └── glib-compile-schemas  →  schema validation
+```
+
+The local build uses an Incus container (`make build`). The CI build runs on GitHub Actions (`ubuntu-24.04`) and is triggered by version tag pushes.
+
+---
+
+## Build profiles
 
 | Profile | Rust target | Notes |
 |---|---|---|
-| `default` | `release` | LTO + single codegen unit + stripped |
-| `development` | `debug` | Verbose cargo output, no stripping |
+| `default` | `release` | LTO, single codegen unit, stripped binary |
+| `development` | `debug` | No stripping, verbose output |
 
-Set via `-Dprofile=development` at configure time.
-
-## Known Caveats
-
-- `gio::Settings::new(APP_ID)` requires the schema to be compiled into a recognised location. When running from the build tree (without `meson install`), set `GSETTINGS_SCHEMA_DIR=_build/data`.
-- The `development` profile does not yet install under a separate `.Devel` application ID — both profiles share `com.example.Swatchbook`. Parallel-installability requires additional wiring in `data/meson.build`.
-- There is no `po/` directory yet; gettext merging in `data/meson.build` will fail until at least an empty `po/LINGUAS` exists.
+Set via `meson setup _build -Dprofile=development`.
