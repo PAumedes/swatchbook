@@ -5,8 +5,8 @@ Priority: optional
 Architecture: amd64
 Depends: libgtk-4-1 (>= 4.10), libadwaita-1-0 (>= 1.4), libglib2.0-0 (>= 2.74)
 Installed-Size: 1024
-Maintainer: The Swatchbook Authors <authors@example.com>
-Homepage: https://github.com/swatchbook/swatchbook
+Maintainer: Patricio Aumedes <patricioaumedes@gmail.com>
+Homepage: https://github.com/PAumedes/swatchbook
 Description: Markdown-powered style binder for GNOME
  Swatchbook lets you write colour palettes, typography specs, and design
  tokens in plain Markdown and renders them as an interactive swatch canvas.

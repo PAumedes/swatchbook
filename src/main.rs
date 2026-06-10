@@ -126,12 +126,14 @@ fn show_about(app: &adw::Application) {
     let about = adw::AboutWindow::builder()
         .application_name("Swatchbook")
         .application_icon(APP_ID)
-        .developer_name("The Swatchbook Authors")
+        .developer_name("Patricio Aumedes")
+        .developers(["Patricio Aumedes"])
         .version(VERSION)
         .comments("A Markdown-powered style binder for GNOME.")
-        .website("https://github.com/swatchbook/swatchbook")
+        .website("https://github.com/PAumedes/swatchbook")
+        .issue_url("https://github.com/PAumedes/swatchbook/issues")
         .license_type(gtk::License::Gpl30)
-        .copyright("© 2026 The Swatchbook Authors")
+        .copyright("© 2026 Patricio Aumedes")
         .build();
 
     if let Some(window) = window {

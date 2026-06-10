@@ -89,7 +89,7 @@ fi
 
 # ── Preview and confirm ──────────────────────────────────────────────────────
 DATESTAMP=$(date -R)
-AUTHOR="The Swatchbook Authors <authors@example.com>"
+AUTHOR="Patricio Aumedes <patricioaumedes@gmail.com>"
 
 printf "\n${BOLD}Changes to be made:${RESET}\n"
 printf "  Version:   %s → %s (%s bump)\n" "$CURRENT" "$NEW_VERSION" "$BUMP_TYPE"
