@@ -1,3 +1,9 @@
+swatchbook (0.3.3) 26.04; urgency=medium
+
+  * Preview is working
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Wed, 10 Jun 2026 00:29:38 -0300
+
 swatchbook (0.3.2) 26.04; urgency=medium
 
   * Fix crash when typing: debounce SourceId was removed twice (once on fire,
