@@ -169,6 +169,17 @@ release-minor: ## Bump minor version (0.1.0 → 0.2.0), build .deb, tag git
 release-major: ## Bump major version (0.1.0 → 1.0.0), build .deb, tag git
 	@bash $(PROJECT_DIR)/build-aux/release.sh major
 
+.PHONY: release-watch
+release-watch: ## Watch the latest GitHub Actions CI run in real time
+	@gh run watch --repo PAumedes/swatchbook
+
+.PHONY: release-status
+release-status: ## Show recent GitHub Actions runs and release assets
+	@printf '$(BOLD)Recent CI runs:$(RESET)\n'
+	@gh run list --repo PAumedes/swatchbook --limit 5
+	@printf '\n$(BOLD)Published releases:$(RESET)\n'
+	@gh release list --repo PAumedes/swatchbook --limit 5
+
 .PHONY: changelog
 changelog: ## Show the full changelog
 	@cat $(PROJECT_DIR)/build-aux/changelog

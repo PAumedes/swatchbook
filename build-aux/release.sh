@@ -123,11 +123,7 @@ printf "%s\n%s" "$NEW_ENTRY" "$EXISTING" > "$CHANGELOG"
 
 success "Version files updated"
 
-# ── Build ────────────────────────────────────────────────────────────────────
-info "Running Incus build for v$NEW_VERSION..."
-bash "$SCRIPT_DIR/incus-build.sh"
-
-# ── Git tag ──────────────────────────────────────────────────────────────────
+# ── Git commit, tag, push ────────────────────────────────────────────────────
 if git -C "$PROJECT_DIR" rev-parse --git-dir &>/dev/null; then
     info "Staging version files"
     git -C "$PROJECT_DIR" add \
@@ -136,10 +132,16 @@ if git -C "$PROJECT_DIR" rev-parse --git-dir &>/dev/null; then
     git -C "$PROJECT_DIR" commit -m "chore: release v$NEW_VERSION"
     git -C "$PROJECT_DIR" tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION: $COMMIT_MSG"
     success "Git commit and tag v$NEW_VERSION created"
-    printf "\n  Push with: ${CYAN}git push && git push --tags${RESET}\n"
+
+    info "Pushing to GitHub (this triggers the CI build)..."
+    git -C "$PROJECT_DIR" push origin main
+    git -C "$PROJECT_DIR" push origin "v$NEW_VERSION"
+    success "Pushed — GitHub Actions is now building the .deb"
+    printf "\n  Watch the build: ${CYAN}gh run watch --repo PAumedes/swatchbook${RESET}\n"
+    printf "  Or:             ${CYAN}make release-watch${RESET}\n"
 else
-    warn "Not a git repository — skipping commit and tag"
+    warn "Not a git repository — skipping commit, tag and push"
 fi
 
-printf "\n${BOLD}${GREEN}Release v%s complete!${RESET}\n" "$NEW_VERSION"
-printf "Package: %s/swatchbook.deb\n\n" "$PROJECT_DIR"
+printf "\n${BOLD}${GREEN}Release v%s triggered!${RESET}\n" "$NEW_VERSION"
+printf "The .deb will appear at: ${CYAN}https://github.com/PAumedes/swatchbook/releases/tag/v%s${RESET}\n\n" "$NEW_VERSION"
