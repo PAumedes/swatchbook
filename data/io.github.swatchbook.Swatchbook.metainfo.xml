@@ -44,9 +44,9 @@
     <name>Patricio Aumedes</name>
   </developer>
 
-  <url type="homepage">https://github.com/swatchbook/swatchbook</url>
-  <url type="bugtracker">https://github.com/swatchbook/swatchbook/issues</url>
-  <url type="vcs-browser">https://github.com/swatchbook/swatchbook</url>
+  <url type="homepage">https://github.com/PAumedes/swatchbook</url>
+  <url type="bugtracker">https://github.com/PAumedes/swatchbook/issues</url>
+  <url type="vcs-browser">https://github.com/PAumedes/swatchbook</url>
 
   <supports>
     <control>keyboard</control>

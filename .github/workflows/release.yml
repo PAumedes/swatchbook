@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Install build dependencies
         run: |
@@ -35,7 +35,7 @@ jobs:
           toolchain: stable
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.3
         with:
           path: |
             ~/.cargo/registry
@@ -78,7 +78,6 @@ jobs:
           gzip -n -9 "$DOC_DIR/changelog"
 
           dpkg-deb --build "$PKG_ROOT" "swatchbook-${VERSION}-amd64.deb"
-          echo "DEB_NAME=swatchbook-${VERSION}-amd64.deb" >> "$GITHUB_ENV"
 
       - name: Extract release notes
         run: |
@@ -97,10 +96,10 @@ jobs:
           cat /tmp/release-notes.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.3.2
         with:
           name: "Swatchbook ${{ github.ref_name }}"
           body_path: /tmp/release-notes.md
-          files: ${{ env.DEB_NAME }}
+          files: swatchbook-*.deb
           draft: false
           prerelease: false

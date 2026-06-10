@@ -54,6 +54,16 @@ install_data(
   install_dir: datadir / 'icons' / 'hicolor' / 'symbolic' / 'apps',
 )
 
+install_data(
+  'icons/hicolor/64x64/apps/@0@.png'.format(base_id),
+  install_dir: datadir / 'icons' / 'hicolor' / '64x64' / 'apps',
+)
+
+install_data(
+  'icons/hicolor/128x128/apps/@0@.png'.format(base_id),
+  install_dir: datadir / 'icons' / 'hicolor' / '128x128' / 'apps',
+)
+
 # ----------------------------------------------------------------------------
 # GSettings schema
 # ----------------------------------------------------------------------------
