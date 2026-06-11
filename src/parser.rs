@@ -2,13 +2,13 @@
 
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 
-use crate::token::{extract_color, ColorValue};
+use crate::token::{extract_token, DesignToken};
 
-/// A single named colour entry extracted from the document.
+/// A single design token entry extracted from the document.
 #[derive(Debug, Clone)]
 pub struct SwatchEntry {
     pub name: String,
-    pub color: ColorValue,
+    pub token: DesignToken,
 }
 
 /// A headed group of colour swatches.
@@ -46,8 +46,8 @@ pub fn parse(markdown: &str) -> Document {
     let mut heading_buf = String::new();
     // Accumulated plain text for the current list item (used as swatch name).
     let mut item_label = String::new();
-    // A colour found in the current list item, waiting to be flushed.
-    let mut pending: Option<ColorValue> = None;
+    // A token found in the current list item, waiting to be flushed.
+    let mut pending: Option<DesignToken> = None;
 
     for event in parser {
         match event {
@@ -69,12 +69,12 @@ pub fn parse(markdown: &str) -> Document {
             }
 
             Event::End(TagEnd::Item) => {
-                if let Some(color) = pending.take() {
+                if let Some(token) = pending.take() {
                     let name = clean_label(&item_label);
-                    let raw = color.to_hex_string();
+                    let fallback = token.fallback_name();
                     current.swatches.push(SwatchEntry {
-                        name: if name.is_empty() { raw } else { name },
-                        color,
+                        name: if name.is_empty() { fallback } else { name },
+                        token,
                     });
                 }
                 item_label.clear();
@@ -84,9 +84,9 @@ pub fn parse(markdown: &str) -> Document {
                 if in_heading {
                     // Treat code inside a heading as heading text.
                     heading_buf.push_str(&text);
-                } else if let Some(color) = extract_color(&text) {
-                    // Keep the last colour token found in the item.
-                    pending = Some(color);
+                } else if let Some(token) = extract_token(&text) {
+                    // Keep the last design token found in the item.
+                    pending = Some(token);
                 } else {
                     item_label.push_str(&text);
                 }

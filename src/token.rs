@@ -3,6 +3,199 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+// ── DesignToken ───────────────────────────────────────────────────────────────
+
+/// A single design token extracted from an inline-code span in a Markdown list item.
+///
+/// Recognised inline-code syntax:
+/// - `#rrggbb`, `rgb()`, `hsl()`, named colours → `Color`
+/// - `font: Family Bold 16px/1.5`               → `Font`
+/// - `radius: 6px`                              → `Radius`
+/// - `shadow: 0 2px 8px rgba(0,0,0,0.15)`       → `Shadow`
+/// - `8px`, `0.5rem`, `2em` (bare size value)   → `Space`
+#[derive(Debug, Clone, PartialEq)]
+pub enum DesignToken {
+    Color(ColorValue),
+    Font {
+        family: String,
+        size_px: f64,
+        weight: u16,
+        line_height: Option<f64>,
+        /// The raw text after `font:`, preserved for display in the card.
+        display: String,
+    },
+    Space {
+        value_px: f64,
+        /// Original string, e.g. `"8px"` or `"0.5rem"`.
+        display: String,
+    },
+    Radius {
+        value_px: f64,
+        display: String,
+    },
+    Shadow(String),
+}
+
+impl DesignToken {
+    /// A short string used as the card name when the list item has no label.
+    pub fn fallback_name(&self) -> String {
+        match self {
+            DesignToken::Color(c) => c.to_hex_string(),
+            DesignToken::Font { display, .. } => format!("font: {display}"),
+            DesignToken::Space { display, .. } => display.clone(),
+            DesignToken::Radius { display, .. } => format!("radius: {display}"),
+            DesignToken::Shadow(css) => format!("shadow: {css}"),
+        }
+    }
+
+    /// Return the inner `ColorValue` if this is a `Color` token.
+    pub fn as_color(&self) -> Option<&ColorValue> {
+        match self {
+            DesignToken::Color(c) => Some(c),
+            _ => None,
+        }
+    }
+}
+
+/// Extract a `DesignToken` from a raw inline-code string.
+///
+/// Priority order: colour → `font:` → `radius:` → `shadow:` → bare size.
+pub fn extract_token(s: &str) -> Option<DesignToken> {
+    let s = s.trim();
+
+    if let Some(color) = extract_color(s) {
+        return Some(DesignToken::Color(color));
+    }
+
+    if let Some(rest) = s.strip_prefix("font:") {
+        return parse_font_token(rest.trim());
+    }
+
+    if let Some(rest) = s.strip_prefix("radius:") {
+        let rest = rest.trim();
+        let value_px = parse_size_to_px(rest)?;
+        return Some(DesignToken::Radius {
+            value_px,
+            display: rest.to_string(),
+        });
+    }
+
+    if let Some(rest) = s.strip_prefix("shadow:") {
+        let rest = rest.trim();
+        if !rest.is_empty() {
+            return Some(DesignToken::Shadow(rest.to_string()));
+        }
+        return None;
+    }
+
+    if let Some(value_px) = parse_size_to_px(s) {
+        return Some(DesignToken::Space {
+            value_px,
+            display: s.to_string(),
+        });
+    }
+
+    None
+}
+
+/// Parse `font: [family] [weight] <size>[/line-height]` into a `Font` token.
+fn parse_font_token(s: &str) -> Option<DesignToken> {
+    let display = s.to_string();
+
+    // Split off an optional /line-height suffix (e.g. `Inter 16px/1.5`).
+    let (main_str, line_height) = match s.rfind('/') {
+        Some(pos) => {
+            let lh_str = s[pos + 1..].trim();
+            // Accept unitless multiplier (`1.5`) or a px/rem length.
+            let lh = lh_str
+                .parse::<f64>()
+                .ok()
+                .or_else(|| parse_size_to_px(lh_str).map(|px| px / 16.0));
+            (s[..pos].trim(), lh)
+        }
+        None => (s, None),
+    };
+
+    // Handle a quoted family name, e.g. `"JetBrains Mono"`.
+    let (quoted_family, remainder) = if main_str.starts_with('"') || main_str.starts_with('\'') {
+        let q = main_str.chars().next()?;
+        let close = main_str[1..].find(q)? + 1;
+        (
+            Some(main_str[1..close].to_string()),
+            main_str[close + 1..].trim(),
+        )
+    } else {
+        (None, main_str)
+    };
+
+    let tokens: Vec<&str> = remainder.split_whitespace().collect();
+    if tokens.is_empty() && quoted_family.is_none() {
+        return None;
+    }
+
+    // Find the size (rightmost token that looks like `16px`, `1rem`, `1.5em`).
+    let size_pos = tokens.iter().rposition(|t| parse_size_to_px(t).is_some())?;
+    let size_px = parse_size_to_px(tokens[size_pos])?;
+
+    // Weight: the token immediately before size, if it's a weight keyword/number.
+    let (weight, family_end) = if size_pos > 0 {
+        if let Some(w) = weight_from_str(tokens[size_pos - 1]) {
+            (w, size_pos - 1)
+        } else {
+            (400u16, size_pos)
+        }
+    } else {
+        (400u16, 0)
+    };
+
+    // Family: quoted name, or unquoted tokens[0..family_end] joined.
+    let family = match quoted_family {
+        Some(f) => f,
+        None if family_end > 0 => tokens[..family_end].join(" "),
+        _ => "sans-serif".to_string(),
+    };
+
+    Some(DesignToken::Font {
+        family,
+        size_px,
+        weight,
+        line_height,
+        display,
+    })
+}
+
+/// Convert a CSS font-weight keyword or numeric string to a CSS weight integer.
+fn weight_from_str(s: &str) -> Option<u16> {
+    match s.to_ascii_lowercase().as_str() {
+        "thin" => Some(100),
+        "extralight" | "extra-light" | "ultralight" => Some(200),
+        "light" => Some(300),
+        "regular" | "normal" => Some(400),
+        "medium" => Some(500),
+        "semibold" | "semi-bold" | "demibold" => Some(600),
+        "bold" => Some(700),
+        "extrabold" | "extra-bold" | "ultrabold" => Some(800),
+        "black" | "heavy" => Some(900),
+        _ => s.parse::<u16>().ok().filter(|&w| (100..=900).contains(&w)),
+    }
+}
+
+/// Convert a CSS size string (`16px`, `1rem`, `1.5em`) to pixels.
+/// `rem`/`em` assume a 16px root font size.
+fn parse_size_to_px(s: &str) -> Option<f64> {
+    if let Some(v) = s.strip_suffix("px") {
+        v.parse::<f64>().ok().filter(|&n| n >= 0.0)
+    } else if let Some(v) = s.strip_suffix("rem") {
+        v.parse::<f64>().ok().map(|n| n * 16.0)
+    } else if let Some(v) = s.strip_suffix("em") {
+        v.parse::<f64>().ok().map(|n| n * 16.0)
+    } else {
+        None
+    }
+}
+
+// ── ColorValue ────────────────────────────────────────────────────────────────
+
 /// A parsed colour value from a Markdown document.
 ///
 /// All numeric formats (`#hex`, `rgb()`, `rgba()`, `hsl()`, `hsla()`) collapse

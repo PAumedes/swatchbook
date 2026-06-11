@@ -1,5 +1,5 @@
 use swatchbook::parser::parse;
-use swatchbook::token::{extract_color, ColorValue};
+use swatchbook::token::{extract_color, ColorValue, DesignToken};
 
 #[test]
 fn extract_hex6() {
@@ -132,8 +132,14 @@ fn single_section_two_swatches() {
     let s = &doc.sections[0];
     assert_eq!(s.heading, "Palette");
     assert_eq!(s.swatches.len(), 2);
-    assert_eq!(s.swatches[0].color, ColorValue::Rgba(0xE5, 0x39, 0x35, 255));
-    assert_eq!(s.swatches[1].color, ColorValue::Rgba(0x34, 0x82, 0xE3, 255));
+    assert_eq!(
+        s.swatches[0].token.as_color(),
+        Some(&ColorValue::Rgba(0xE5, 0x39, 0x35, 255))
+    );
+    assert_eq!(
+        s.swatches[1].token.as_color(),
+        Some(&ColorValue::Rgba(0x34, 0x82, 0xE3, 255))
+    );
 }
 
 #[test]
@@ -142,8 +148,8 @@ fn two_sections() {
     let doc = parse(md);
     assert_eq!(doc.sections.len(), 2);
     assert_eq!(
-        doc.sections[1].swatches[0].color,
-        ColorValue::Rgba(30, 30, 30, 255)
+        doc.sections[1].swatches[0].token.as_color(),
+        Some(&ColorValue::Rgba(30, 30, 30, 255))
     );
 }
 
@@ -194,8 +200,8 @@ fn last_color_token_wins_in_item() {
     let md = "# P\n\n- See `#ff0000` or `#00ff00`\n";
     let doc = parse(md);
     assert_eq!(
-        doc.sections[0].swatches[0].color,
-        ColorValue::Rgba(0x00, 0xff, 0x00, 255)
+        doc.sections[0].swatches[0].token.as_color(),
+        Some(&ColorValue::Rgba(0x00, 0xff, 0x00, 255))
     );
 }
 
@@ -205,4 +211,69 @@ fn item_without_color_is_ignored() {
     let doc = parse(md);
     assert_eq!(doc.sections[0].swatches.len(), 1);
     assert_eq!(doc.sections[0].swatches[0].name, "Red");
+}
+
+// ── Non-colour design tokens ─────────────────────────────────────────────────
+
+#[test]
+fn parse_font_token() {
+    let md = "# Typography\n\n- **Body** — `font: sans-serif 16px/1.5`\n";
+    let doc = parse(md);
+    let e = &doc.sections[0].swatches[0];
+    assert_eq!(e.name, "Body");
+    match &e.token {
+        DesignToken::Font {
+            family, size_px, ..
+        } => {
+            assert_eq!(family, "sans-serif");
+            assert!((size_px - 16.0).abs() < 0.001);
+        }
+        _ => panic!("expected Font token, got {:?}", e.token),
+    }
+}
+
+#[test]
+fn parse_space_token() {
+    let md = "# Spacing\n\n- **gap-md** — `8px`\n";
+    let doc = parse(md);
+    let e = &doc.sections[0].swatches[0];
+    assert_eq!(e.name, "gap-md");
+    assert!(
+        matches!(&e.token, DesignToken::Space { value_px, .. } if (*value_px - 8.0).abs() < 0.001)
+    );
+}
+
+#[test]
+fn parse_radius_token() {
+    let md = "# Radius\n\n- **button** — `radius: 6px`\n";
+    let doc = parse(md);
+    let e = &doc.sections[0].swatches[0];
+    assert_eq!(e.name, "button");
+    assert!(
+        matches!(&e.token, DesignToken::Radius { value_px, .. } if (*value_px - 6.0).abs() < 0.001)
+    );
+}
+
+#[test]
+fn parse_shadow_token() {
+    let md = "# Shadows\n\n- **card** — `shadow: 0 2px 8px rgba(0,0,0,0.12)`\n";
+    let doc = parse(md);
+    let e = &doc.sections[0].swatches[0];
+    assert_eq!(e.name, "card");
+    assert!(matches!(&e.token, DesignToken::Shadow(css) if css == "0 2px 8px rgba(0,0,0,0.12)"));
+}
+
+#[test]
+fn mixed_token_types_all_parsed() {
+    let md = "# System\n\n\
+              - **Primary** — `#3482E3`\n\
+              - **Body** — `font: sans-serif 16px`\n\
+              - **gap** — `8px`\n\
+              - **btn-r** — `radius: 6px`\n";
+    let doc = parse(md);
+    assert_eq!(doc.sections[0].swatches.len(), 4);
+    assert!(matches!(doc.sections[0].swatches[0].token, DesignToken::Color(_)));
+    assert!(matches!(doc.sections[0].swatches[1].token, DesignToken::Font { .. }));
+    assert!(matches!(doc.sections[0].swatches[2].token, DesignToken::Space { .. }));
+    assert!(matches!(doc.sections[0].swatches[3].token, DesignToken::Radius { .. }));
 }

@@ -11,7 +11,8 @@ use gtk::{gdk, gio, glib};
 
 use swatchbook::document::Document;
 use swatchbook::parser;
-use swatchbook::renderer::{self, SwatchItem};
+use swatchbook::renderer::{self, RenderCard, SwatchItem};
+use swatchbook::token::DesignToken;
 
 mod imp {
     use super::*;
@@ -38,8 +39,8 @@ mod imp {
 
         pub settings: OnceCell<gio::Settings>,
 
-        /// Parsed swatches waiting to be drawn.
-        pub swatches: RefCell<Vec<SwatchItem>>,
+        /// Parsed design-token cards waiting to be drawn.
+        pub cards: RefCell<Vec<RenderCard>>,
 
         /// Pending debounce timeout — cancelled on each new keystroke.
         pub debounce_id: RefCell<Option<glib::SourceId>>,
@@ -168,10 +169,10 @@ impl SwatchbookWindow {
             let Some(win) = window_weak.upgrade() else {
                 return;
             };
-            let items = win.imp().swatches.borrow();
+            let cards = win.imp().cards.borrow();
             let focused = *win.imp().focused_swatch.borrow();
             let dark = style_manager.is_dark();
-            renderer::render(cr, &items, width as f64, height as f64, dark, focused);
+            renderer::render(cr, &cards, width as f64, height as f64, dark, focused);
         });
 
         // Update canvas height whenever the allocated width changes so the
@@ -181,7 +182,7 @@ impl SwatchbookWindow {
             let Some(win) = win_weak.upgrade() else {
                 return;
             };
-            let count = win.imp().swatches.borrow().len();
+            let count = win.imp().cards.borrow().len();
             let h = renderer::content_height(count, width as f64).ceil() as i32;
             canvas.set_content_height(h.max(360));
         });
@@ -203,9 +204,9 @@ impl SwatchbookWindow {
             win.imp().canvas.grab_focus();
             if let Some(idx) = win.swatch_at(x, y) {
                 *win.imp().focused_swatch.borrow_mut() = Some(idx);
-                let hex = win.imp().swatches.borrow()[idx].hex.clone();
-                win.clipboard().set_text(&hex);
-                win.show_toast(&format!("Copied {hex}"));
+                let value = win.imp().cards.borrow()[idx].copy_value();
+                win.clipboard().set_text(&value);
+                win.show_toast(&format!("Copied {value}"));
                 win.imp().canvas.queue_draw();
             }
         });
@@ -220,7 +221,7 @@ impl SwatchbookWindow {
                 return glib::Propagation::Proceed;
             };
             let imp = win.imp();
-            let count = imp.swatches.borrow().len();
+            let count = imp.cards.borrow().len();
             if count == 0 {
                 return glib::Propagation::Proceed;
             }
@@ -247,9 +248,9 @@ impl SwatchbookWindow {
                 gdk::Key::Return | gdk::Key::KP_Enter => {
                     if let Some(idx) = *imp.focused_swatch.borrow() {
                         if idx < count {
-                            let hex = imp.swatches.borrow()[idx].hex.clone();
-                            win.clipboard().set_text(&hex);
-                            win.show_toast(&format!("Copied {hex}"));
+                            let value = imp.cards.borrow()[idx].copy_value();
+                            win.clipboard().set_text(&value);
+                            win.show_toast(&format!("Copied {value}"));
                         }
                     }
                     glib::Propagation::Stop
@@ -304,26 +305,56 @@ impl SwatchbookWindow {
     /// Re-parse `markdown` and refresh the canvas draw function's data.
     fn reparse(&self, markdown: &str) {
         let parsed = parser::parse(markdown);
-        let items: Vec<SwatchItem> = parsed
+        let cards: Vec<RenderCard> = parsed
             .all_swatches()
-            .map(|e| {
-                let (r, g, b, a) = e.color.to_rgba();
-                SwatchItem {
-                    name: e.name.clone(),
-                    hex: e.color.to_hex_string(),
-                    r,
-                    g,
-                    b,
-                    a,
+            .map(|e| match &e.token {
+                DesignToken::Color(color) => {
+                    let (r, g, b, a) = color.to_rgba();
+                    RenderCard::Color(SwatchItem {
+                        name: e.name.clone(),
+                        hex: color.to_hex_string(),
+                        r,
+                        g,
+                        b,
+                        a,
+                    })
                 }
+                DesignToken::Font {
+                    family,
+                    size_px,
+                    weight,
+                    line_height,
+                    display,
+                } => RenderCard::Font {
+                    name: e.name.clone(),
+                    family: family.clone(),
+                    size_px: *size_px,
+                    weight: *weight,
+                    line_height: *line_height,
+                    display: display.clone(),
+                },
+                DesignToken::Space { value_px, display } => RenderCard::Space {
+                    name: e.name.clone(),
+                    value_px: *value_px,
+                    display: display.clone(),
+                },
+                DesignToken::Radius { value_px, display } => RenderCard::Radius {
+                    name: e.name.clone(),
+                    value_px: *value_px,
+                    display: display.clone(),
+                },
+                DesignToken::Shadow(css) => RenderCard::Shadow {
+                    name: e.name.clone(),
+                    css: css.clone(),
+                },
             })
             .collect();
 
-        let has_swatches = !items.is_empty();
+        let has_swatches = !cards.is_empty();
         let canvas_w = self.imp().canvas.allocated_width().max(480) as f64;
-        let canvas_h = renderer::content_height(items.len(), canvas_w).ceil() as i32;
-        let new_count = items.len();
-        *self.imp().swatches.borrow_mut() = items;
+        let canvas_h = renderer::content_height(cards.len(), canvas_w).ceil() as i32;
+        let new_count = cards.len();
+        *self.imp().cards.borrow_mut() = cards;
 
         // Keep focused index in bounds after a re-parse.
         let mut focused = self.imp().focused_swatch.borrow_mut();
@@ -467,7 +498,7 @@ impl SwatchbookWindow {
     /// Hit-test a canvas point against the swatch layout, returning the index
     /// of the swatch rectangle under `(x, y)`, if any.
     fn swatch_at(&self, x: f64, y: f64) -> Option<usize> {
-        let count = self.imp().swatches.borrow().len();
+        let count = self.imp().cards.borrow().len();
         if count == 0 {
             return None;
         }
@@ -479,8 +510,8 @@ impl SwatchbookWindow {
 
     fn canvas_export_size(&self) -> (u32, u32) {
         let w = self.imp().canvas.allocated_width().max(480) as u32;
-        let items = self.imp().swatches.borrow();
-        let h = renderer::content_height(items.len(), w as f64).ceil() as u32;
+        let count = self.imp().cards.borrow().len();
+        let h = renderer::content_height(count, w as f64).ceil() as u32;
         (w, h.max(360))
     }
 
@@ -541,8 +572,8 @@ impl SwatchbookWindow {
     }
 
     fn action_export_png(&self) {
-        if self.imp().swatches.borrow().is_empty() {
-            self.show_toast("No swatches to export.");
+        if self.imp().cards.borrow().is_empty() {
+            self.show_toast("No tokens to export.");
             return;
         }
 
@@ -562,9 +593,9 @@ impl SwatchbookWindow {
         dialog.save(Some(self), gio::Cancellable::NONE, move |result| {
             if let Ok(file) = result {
                 if let Some(path) = file.path() {
-                    let items = win.imp().swatches.borrow().clone();
+                    let cards = win.imp().cards.borrow().clone();
                     let (w, h) = win.canvas_export_size();
-                    match renderer::export_png(&items, w, h, &path) {
+                    match renderer::export_png(&cards, w, h, &path) {
                         Ok(()) => win.show_toast(&gettextrs::gettext("PNG exported.")),
                         Err(e) => win.show_toast(&format!(
                             "{}: {e}",
@@ -577,8 +608,8 @@ impl SwatchbookWindow {
     }
 
     fn action_export_svg(&self) {
-        if self.imp().swatches.borrow().is_empty() {
-            self.show_toast("No swatches to export.");
+        if self.imp().cards.borrow().is_empty() {
+            self.show_toast("No tokens to export.");
             return;
         }
 
@@ -598,9 +629,9 @@ impl SwatchbookWindow {
         dialog.save(Some(self), gio::Cancellable::NONE, move |result| {
             if let Ok(file) = result {
                 if let Some(path) = file.path() {
-                    let items = win.imp().swatches.borrow().clone();
+                    let cards = win.imp().cards.borrow().clone();
                     let (w, h) = win.canvas_export_size();
-                    match renderer::export_svg(&items, w, h, &path) {
+                    match renderer::export_svg(&cards, w, h, &path) {
                         Ok(()) => win.show_toast(&gettextrs::gettext("SVG exported.")),
                         Err(e) => win.show_toast(&format!(
                             "{}: {e}",
@@ -613,15 +644,21 @@ impl SwatchbookWindow {
     }
 
     fn action_copy_css(&self) {
-        let items = self.imp().swatches.borrow();
-        if items.is_empty() {
-            self.show_toast("No swatches to copy.");
+        let cards = self.imp().cards.borrow();
+        let color_items: Vec<SwatchItem> = cards.iter().filter_map(|c| c.as_color().cloned()).collect();
+        drop(cards);
+        if color_items.is_empty() {
+            self.show_toast("No colour tokens to copy.");
             return;
         }
-        let css = renderer::to_css_variables(&items);
-        drop(items);
+        let css = renderer::to_css_variables(&color_items);
         self.clipboard().set_text(&css);
-        self.show_toast("CSS variables copied to clipboard.");
+        let n = color_items.len();
+        self.show_toast(&format!(
+            "{} CSS variable{} copied.",
+            n,
+            if n == 1 { "" } else { "s" }
+        ));
     }
 
     fn update_title(&self) {
@@ -672,14 +709,28 @@ impl SwatchbookWindow {
         if !buf.text(&start, &end, false).is_empty() {
             return;
         }
-        let text = "# Swatchbook\n\n\
-             A *Markdown-powered* style binder.\n\n\
+        let text = "# My Design System\n\n\
              ## Palette\n\n\
              - **Primary** — `#3482E3`\n\
              - **Success** — `#2EC27E`\n\
              - **Warning** — `#F5C211`\n\
              - **Error** — `#E53935`\n\
-             - **Purple** — `#9C27B0`\n";
+             - **Purple** — `#9C27B0`\n\n\
+             ## Typography\n\n\
+             - **Body** — `font: sans-serif 16px/1.5`\n\
+             - **Heading** — `font: sans-serif Bold 24px`\n\
+             - **Mono** — `font: monospace 14px`\n\n\
+             ## Spacing\n\n\
+             - **xs** — `4px`\n\
+             - **sm** — `8px`\n\
+             - **md** — `16px`\n\
+             - **lg** — `32px`\n\n\
+             ## Radius\n\n\
+             - **button** — `radius: 6px`\n\
+             - **card** — `radius: 12px`\n\n\
+             ## Shadow\n\n\
+             - **card** — `shadow: 0 2px 8px rgba(0,0,0,0.12)`\n\
+             - **modal** — `shadow: 0 8px 24px rgba(0,0,0,0.2)`\n";
         // set_text fires `changed` synchronously; reset the flag so a fresh
         // window doesn't start life with the unsaved-changes bullet.
         buf.set_text(text);
