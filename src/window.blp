@@ -143,8 +143,23 @@ menu primary_menu {
     }
 
     item {
+      label: _("Export as _JSON Tokens…");
+      action: "win.export-json";
+    }
+
+    item {
+      label: _("Export as _GIMP Palette…");
+      action: "win.export-gpl";
+    }
+
+    item {
       label: _("Copy CSS _Variables");
       action: "win.copy-css";
+    }
+
+    item {
+      label: _("Copy _Tailwind Config");
+      action: "win.copy-tailwind";
     }
   }
 

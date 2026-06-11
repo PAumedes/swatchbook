@@ -402,8 +402,27 @@ impl SwatchbookWindow {
         let copy_css = gio::ActionEntry::builder("copy-css")
             .activate(|win: &Self, _, _| win.action_copy_css())
             .build();
+        let export_json = gio::ActionEntry::builder("export-json")
+            .activate(|win: &Self, _, _| win.action_export_json())
+            .build();
+        let export_gpl = gio::ActionEntry::builder("export-gpl")
+            .activate(|win: &Self, _, _| win.action_export_gpl())
+            .build();
+        let copy_tailwind = gio::ActionEntry::builder("copy-tailwind")
+            .activate(|win: &Self, _, _| win.action_copy_tailwind())
+            .build();
 
-        self.add_action_entries([open, save, save_as, export_png, export_svg, copy_css]);
+        self.add_action_entries([
+            open,
+            save,
+            save_as,
+            export_png,
+            export_svg,
+            copy_css,
+            export_json,
+            export_gpl,
+            copy_tailwind,
+        ]);
     }
 
     fn action_open(&self) {
@@ -658,6 +677,100 @@ impl SwatchbookWindow {
             "{} CSS variable{} copied.",
             n,
             if n == 1 { "" } else { "s" }
+        ));
+    }
+
+    fn action_export_json(&self) {
+        if self.imp().cards.borrow().is_empty() {
+            self.show_toast("No tokens to export.");
+            return;
+        }
+
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some("JSON design tokens"));
+        filter.add_pattern("*.json");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+
+        let dialog = gtk::FileDialog::builder()
+            .title("Export Design Tokens as JSON")
+            .filters(&filters)
+            .initial_name("tokens.json")
+            .build();
+
+        let win = self.clone();
+        dialog.save(Some(self), gio::Cancellable::NONE, move |result| {
+            if let Ok(file) = result {
+                if let Some(path) = file.path() {
+                    let cards = win.imp().cards.borrow().clone();
+                    let json = renderer::to_design_tokens_json(&cards);
+                    match std::fs::write(&path, json) {
+                        Ok(()) => win.show_toast(&gettextrs::gettext("Design tokens exported.")),
+                        Err(e) => win.show_toast(&format!("JSON export failed: {e}")),
+                    }
+                }
+            }
+        });
+    }
+
+    fn action_export_gpl(&self) {
+        let cards = self.imp().cards.borrow();
+        let color_count = cards.iter().filter(|c| c.as_color().is_some()).count();
+        drop(cards);
+        if color_count == 0 {
+            self.show_toast("No colour tokens to export.");
+            return;
+        }
+
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some("GIMP palette"));
+        filter.add_pattern("*.gpl");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+
+        let palette_name = self
+            .imp()
+            .document
+            .borrow()
+            .title()
+            .trim_end_matches(".md")
+            .to_string();
+
+        let dialog = gtk::FileDialog::builder()
+            .title("Export as GIMP Palette")
+            .filters(&filters)
+            .initial_name("palette.gpl")
+            .build();
+
+        let win = self.clone();
+        dialog.save(Some(self), gio::Cancellable::NONE, move |result| {
+            if let Ok(file) = result {
+                if let Some(path) = file.path() {
+                    let cards = win.imp().cards.borrow().clone();
+                    let gpl = renderer::to_gimp_palette(&cards, &palette_name);
+                    match std::fs::write(&path, gpl) {
+                        Ok(()) => win.show_toast(&gettextrs::gettext("GIMP palette exported.")),
+                        Err(e) => win.show_toast(&format!("GPL export failed: {e}")),
+                    }
+                }
+            }
+        });
+    }
+
+    fn action_copy_tailwind(&self) {
+        let cards = self.imp().cards.borrow();
+        let color_count = cards.iter().filter(|c| c.as_color().is_some()).count();
+        if color_count == 0 {
+            self.show_toast("No colour tokens to copy.");
+            drop(cards);
+            return;
+        }
+        let tw = renderer::to_tailwind_config(&cards);
+        drop(cards);
+        self.clipboard().set_text(&tw);
+        self.show_toast(&format!(
+            "Tailwind config with {color_count} colour{} copied.",
+            if color_count == 1 { "" } else { "s" }
         ));
     }
 

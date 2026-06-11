@@ -510,6 +510,151 @@ pub fn to_css_variables(items: &[SwatchItem]) -> String {
     out
 }
 
+/// Export all design tokens as a W3C Design Tokens Community Group JSON file.
+///
+/// Each card becomes one top-level token entry:
+/// - Color  → `"$type": "color"`, `"$value": "#rrggbb"`
+/// - Font   → `"$type": "typography"`, `"$value": {fontFamily, fontSize, fontWeight[, lineHeight]}`
+/// - Space  → `"$type": "dimension"`, `"$value": "8px"`
+/// - Radius → `"$type": "borderRadius"`, `"$value": "6px"`
+/// - Shadow → `"$type": "shadow"`, `"$value": "0 2px 8px …"`
+pub fn to_design_tokens_json(cards: &[RenderCard]) -> String {
+    let mut out = String::from("{\n");
+    let slugs = unique_slugs(cards);
+
+    for (card, slug) in cards.iter().zip(slugs.iter()) {
+        match card {
+            RenderCard::Color(item) => {
+                out.push_str(&format!(
+                    "  \"{slug}\": {{ \"$type\": \"color\", \"$value\": \"{}\" }},\n",
+                    item.hex
+                ));
+            }
+            RenderCard::Font {
+                family,
+                size_px,
+                weight,
+                line_height,
+                ..
+            } => {
+                let size_str = format!("{size_px}px");
+                let fam = family.replace('"', "\\\"");
+                let lh_field = match line_height {
+                    Some(lh) => format!(", \"lineHeight\": {lh}"),
+                    None => String::new(),
+                };
+                out.push_str(&format!(
+                    "  \"{slug}\": {{ \"$type\": \"typography\", \"$value\": \
+                     {{ \"fontFamily\": \"{fam}\", \"fontSize\": \"{size_str}\", \
+                     \"fontWeight\": {weight}{lh_field} }} }},\n"
+                ));
+            }
+            RenderCard::Space { display, .. } => {
+                out.push_str(&format!(
+                    "  \"{slug}\": {{ \"$type\": \"dimension\", \"$value\": \"{display}\" }},\n"
+                ));
+            }
+            RenderCard::Radius { display, .. } => {
+                out.push_str(&format!(
+                    "  \"{slug}\": {{ \"$type\": \"borderRadius\", \"$value\": \"{display}\" }},\n"
+                ));
+            }
+            RenderCard::Shadow { css, .. } => {
+                let css_esc = css.replace('"', "\\\"");
+                out.push_str(&format!(
+                    "  \"{slug}\": {{ \"$type\": \"shadow\", \"$value\": \"{css_esc}\" }},\n"
+                ));
+            }
+        }
+    }
+
+    // Strip trailing comma from the last entry so the JSON is valid.
+    if out.ends_with(",\n") {
+        out.truncate(out.len() - 2);
+        out.push('\n');
+    }
+    out.push('}');
+    out
+}
+
+/// Export colour tokens as a GIMP palette file (`.gpl`).
+///
+/// Non-colour tokens (Font, Space, Radius, Shadow) are silently skipped.
+pub fn to_gimp_palette(cards: &[RenderCard], palette_name: &str) -> String {
+    let mut out = String::from("GIMP Palette\n");
+    out.push_str(&format!("Name: {palette_name}\n"));
+    out.push_str("Columns: 5\n#\n");
+
+    for card in cards {
+        let RenderCard::Color(item) = card else {
+            continue;
+        };
+        out.push_str(&format!(
+            "{:>3} {:>3} {:>3}\t{}\n",
+            item.r, item.g, item.b, item.name
+        ));
+    }
+    out
+}
+
+/// Export colour tokens as a Tailwind CSS `theme.colors` config snippet (`.js`).
+///
+/// Non-colour tokens are silently skipped. The output is a self-contained JS
+/// module that can be merged into an existing `tailwind.config.js`.
+pub fn to_tailwind_config(cards: &[RenderCard]) -> String {
+    let mut out =
+        String::from("/** @type {import('tailwindcss').Config} */\nmodule.exports = {\n  theme: {\n    colors: {\n");
+
+    let color_cards: Vec<&RenderCard> = cards.iter().filter(|c| c.as_color().is_some()).collect();
+    let slugs = unique_slugs(&color_cards.iter().map(|c| (*c).clone()).collect::<Vec<_>>());
+
+    for (card, slug) in color_cards.iter().zip(slugs.iter()) {
+        let Some(item) = card.as_color() else {
+            continue;
+        };
+        out.push_str(&format!("      '{slug}': '{}',\n", item.hex));
+    }
+
+    out.push_str("    },\n  },\n};\n");
+    out
+}
+
+/// Build de-duplicated kebab-case slugs for a slice of cards.
+///
+/// Duplicate base slugs get a numeric suffix (`primary`, `primary-2`, …).
+fn unique_slugs(cards: &[RenderCard]) -> Vec<String> {
+    let mut seen: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    cards
+        .iter()
+        .map(|card| {
+            let base = name_to_slug(card.name(), &card.value_label());
+            let count = seen.entry(base.clone()).or_insert(0);
+            *count += 1;
+            if *count == 1 {
+                base
+            } else {
+                format!("{base}-{count}")
+            }
+        })
+        .collect()
+}
+
+/// Convert a token name to a kebab-case slug, falling back to `fallback`
+/// (typically the value string without `#`) when the name is all punctuation.
+fn name_to_slug(name: &str, fallback: &str) -> String {
+    let base: String = name
+        .to_lowercase()
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|p| !p.is_empty())
+        .collect::<Vec<_>>()
+        .join("-");
+    if base.is_empty() {
+        fallback.trim_start_matches('#').to_string()
+    } else {
+        base
+    }
+}
+
 fn draw_text(
     cr: &cairo::Context,
     text: &str,
