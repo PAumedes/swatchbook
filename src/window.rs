@@ -9,14 +9,14 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gdk, gio, glib};
 
-use crate::document::Document;
-use crate::parser;
-use crate::renderer::{self, SwatchItem};
+use swatchbook::document::Document;
+use swatchbook::parser;
+use swatchbook::renderer::{self, SwatchItem};
 
 mod imp {
     use super::*;
     use gtk::CompositeTemplate;
-    use std::cell::{OnceCell, RefCell};
+    use std::cell::{Cell, OnceCell, RefCell};
 
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/io/github/patricioaumedes/Swatchbook/window.ui")]
@@ -52,6 +52,10 @@ mod imp {
 
         /// Index of the keyboard-focused swatch on the canvas, if any.
         pub focused_swatch: RefCell<Option<usize>>,
+
+        /// Set once the user has resolved the unsaved-changes prompt, so the
+        /// follow-up close request skips the prompt and proceeds.
+        pub force_close: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -88,7 +92,16 @@ mod imp {
 
     impl WindowImpl for SwatchbookWindow {
         fn close_request(&self) -> glib::Propagation {
-            if let Err(e) = self.obj().save_window_state() {
+            let obj = self.obj();
+
+            // Unsaved changes: intercept the close and ask. The prompt's
+            // response re-issues the close with `force_close` set.
+            if !self.force_close.get() && obj.imp().document.borrow().is_modified {
+                obj.confirm_close();
+                return glib::Propagation::Stop;
+            }
+
+            if let Err(e) = obj.save_window_state() {
                 eprintln!("swatchbook: failed to save window state: {e}");
             }
             Document::clear_sentinel().ok();
@@ -172,11 +185,20 @@ impl SwatchbookWindow {
             canvas.queue_draw();
         });
 
-        // Click anywhere on the canvas to grab keyboard focus.
+        // Click a swatch to focus it and copy its hex; click empty space to
+        // just grab keyboard focus.
         let click = gtk::GestureClick::new();
-        let canvas_ref = imp.canvas.get();
-        click.connect_pressed(move |_, _, _, _| {
-            canvas_ref.grab_focus();
+        let win_weak_click = self.downgrade();
+        click.connect_pressed(move |_, _, x, y| {
+            let Some(win) = win_weak_click.upgrade() else { return };
+            win.imp().canvas.grab_focus();
+            if let Some(idx) = win.swatch_at(x, y) {
+                *win.imp().focused_swatch.borrow_mut() = Some(idx);
+                let hex = win.imp().swatches.borrow()[idx].hex.clone();
+                win.clipboard().set_text(&hex);
+                win.show_toast(&format!("Copied {hex}"));
+                win.imp().canvas.queue_draw();
+            }
         });
         imp.canvas.set_focusable(true);
         imp.canvas.add_controller(click);
@@ -273,13 +295,14 @@ impl SwatchbookWindow {
         let items: Vec<SwatchItem> = parsed
             .all_swatches()
             .map(|e| {
-                let (r, g, b) = e.color.to_rgb();
+                let (r, g, b, a) = e.color.to_rgba();
                 SwatchItem {
                     name: e.name.clone(),
                     hex: e.color.to_hex_string(),
                     r,
                     g,
                     b,
+                    a,
                 }
             })
             .collect();
@@ -367,7 +390,10 @@ impl SwatchbookWindow {
                 self.imp().document.borrow_mut().is_modified = false;
                 self.update_title();
             }
-            Err(e) => eprintln!("swatchbook: failed to open file: {e}"),
+            Err(e) => self.show_error(
+                &gettextrs::gettext("Could not open file"),
+                &e.to_string(),
+            ),
         }
     }
 
@@ -385,7 +411,7 @@ impl SwatchbookWindow {
         let text = buf.text(&start, &end, false).to_string();
         self.imp().document.borrow_mut().content = text;
         if let Err(e) = self.imp().document.borrow_mut().save() {
-            eprintln!("swatchbook: save failed: {e}");
+            self.show_error(&gettextrs::gettext("Could not save file"), &e.to_string());
         }
         self.update_title();
     }
@@ -413,12 +439,25 @@ impl SwatchbookWindow {
                     let text = buf.text(&start, &end, false).to_string();
                     win.imp().document.borrow_mut().content = text;
                     if let Err(e) = win.imp().document.borrow_mut().save_to(path) {
-                        eprintln!("swatchbook: save-as failed: {e}");
+                        win.show_error(&gettextrs::gettext("Could not save file"), &e.to_string());
                     }
                     win.update_title();
                 }
             }
         });
+    }
+
+    /// Hit-test a canvas point against the swatch layout, returning the index
+    /// of the swatch rectangle under `(x, y)`, if any.
+    fn swatch_at(&self, x: f64, y: f64) -> Option<usize> {
+        let count = self.imp().swatches.borrow().len();
+        if count == 0 {
+            return None;
+        }
+        let width = self.imp().canvas.allocated_width().max(480) as f64;
+        renderer::layout(count, width).into_iter().position(|rect| {
+            x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h
+        })
     }
 
     fn canvas_export_size(&self) -> (u32, u32) {
@@ -430,6 +469,58 @@ impl SwatchbookWindow {
 
     fn show_toast(&self, message: &str) {
         self.imp().toast_overlay.add_toast(adw::Toast::new(message));
+    }
+
+    /// Show a modal error dialog for failures the user must not miss (e.g. a
+    /// failed save). Less serious feedback should use `show_toast` instead.
+    fn show_error(&self, heading: &str, detail: &str) {
+        let dialog = adw::MessageDialog::new(Some(self), Some(heading), Some(detail));
+        dialog.add_response("ok", &gettextrs::gettext("OK"));
+        dialog.set_default_response(Some("ok"));
+        dialog.present();
+    }
+
+    /// Prompt before closing a window with unsaved changes. Resolves to one of
+    /// three outcomes: cancel (stay open), discard (close losing edits), or save
+    /// (persist then close). The chosen path re-issues the close with
+    /// `force_close` set so the prompt isn't shown twice.
+    fn confirm_close(&self) {
+        let dialog = adw::MessageDialog::new(
+            Some(self),
+            Some(&gettextrs::gettext("Save changes?")),
+            Some(&gettextrs::gettext(
+                "Your binder has unsaved changes. They will be lost if you close without saving.",
+            )),
+        );
+        dialog.add_response("cancel", &gettextrs::gettext("Cancel"));
+        dialog.add_response("discard", &gettextrs::gettext("Discard"));
+        dialog.add_response("save", &gettextrs::gettext("Save"));
+        dialog.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
+        dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("save"));
+        dialog.set_close_response("cancel");
+
+        let win = self.clone();
+        dialog.connect_response(None, move |_, response| match response {
+            "discard" => {
+                win.imp().force_close.set(true);
+                win.close();
+            }
+            "save" => {
+                let had_path = win.imp().document.borrow().path.is_some();
+                win.action_save();
+                // With a known path the save is synchronous, so close now. Without
+                // one, `action_save` opened the Save-As dialog asynchronously;
+                // leave the window open and let the user close again once saved.
+                if had_path && !win.imp().document.borrow().is_modified {
+                    win.imp().force_close.set(true);
+                    win.close();
+                }
+            }
+            _ => {} // cancel: stay open
+        });
+
+        dialog.present();
     }
 
     fn action_export_png(&self) {
@@ -457,8 +548,11 @@ impl SwatchbookWindow {
                     let items = win.imp().swatches.borrow().clone();
                     let (w, h) = win.canvas_export_size();
                     match renderer::export_png(&items, w, h, &path) {
-                        Ok(()) => win.show_toast("PNG exported."),
-                        Err(e) => eprintln!("swatchbook: PNG export failed: {e}"),
+                        Ok(()) => win.show_toast(&gettextrs::gettext("PNG exported.")),
+                        Err(e) => win.show_toast(&format!(
+                            "{}: {e}",
+                            gettextrs::gettext("PNG export failed")
+                        )),
                     }
                 }
             }
@@ -490,8 +584,11 @@ impl SwatchbookWindow {
                     let items = win.imp().swatches.borrow().clone();
                     let (w, h) = win.canvas_export_size();
                     match renderer::export_svg(&items, w, h, &path) {
-                        Ok(()) => win.show_toast("SVG exported."),
-                        Err(e) => eprintln!("swatchbook: SVG export failed: {e}"),
+                        Ok(()) => win.show_toast(&gettextrs::gettext("SVG exported.")),
+                        Err(e) => win.show_toast(&format!(
+                            "{}: {e}",
+                            gettextrs::gettext("SVG export failed")
+                        )),
                     }
                 }
             }

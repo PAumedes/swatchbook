@@ -13,11 +13,13 @@ use pangocairo::functions as pc;
 #[derive(Debug, Clone)]
 pub struct SwatchItem {
     pub name: String,
-    /// Always `#rrggbb` lowercase.
+    /// `#rrggbb` when opaque, `#rrggbbaa` when transparent — lowercase.
     pub hex: String,
     pub r: u8,
     pub g: u8,
     pub b: u8,
+    /// Alpha channel, 0..=255 (255 = fully opaque).
+    pub a: u8,
 }
 
 // ── Layout ───────────────────────────────────────────────────────────────────
@@ -129,9 +131,18 @@ pub fn render(
             let _ = cr.stroke();
         }
 
-        // Swatch fill
+        // Swatch fill. For translucent colours, paint a checkerboard first so
+        // the transparency reads visually instead of blending into the canvas.
+        let alpha = item.a as f64 / 255.0;
+        if item.a < 255 {
+            rounded_rect(cr, rect.x, rect.y, rect.w, rect.h, RADIUS);
+            let _ = cr.save();
+            cr.clip();
+            draw_checkerboard(cr, rect);
+            let _ = cr.restore();
+        }
         rounded_rect(cr, rect.x, rect.y, rect.w, rect.h, RADIUS);
-        cr.set_source_rgb(r, g, b);
+        cr.set_source_rgba(r, g, b, alpha);
         let _ = cr.fill();
 
         let text_y = rect.y + rect.h + LABEL_GAP;
@@ -243,6 +254,29 @@ fn draw_text(cr: &cairo::Context, text: &str, x: f64, y: f64, max_w: f64, size_p
 
     cr.move_to(x, y);
     pc::show_layout(cr, &layout);
+}
+
+/// Paint a light/grey checkerboard inside `rect` — the conventional "this area
+/// is transparent" backdrop. The caller is expected to have clipped to the
+/// swatch shape first.
+fn draw_checkerboard(cr: &cairo::Context, rect: &SwatchRect) {
+    const CELL: f64 = 8.0;
+    cr.set_source_rgb(1.0, 1.0, 1.0);
+    cr.rectangle(rect.x, rect.y, rect.w, rect.h);
+    let _ = cr.fill();
+
+    cr.set_source_rgb(0.8, 0.8, 0.8);
+    let cols = (rect.w / CELL).ceil() as usize;
+    let rows = (rect.h / CELL).ceil() as usize;
+    for row in 0..rows {
+        for col in 0..cols {
+            if (row + col) % 2 == 0 {
+                continue;
+            }
+            cr.rectangle(rect.x + col as f64 * CELL, rect.y + row as f64 * CELL, CELL, CELL);
+        }
+    }
+    let _ = cr.fill();
 }
 
 fn rounded_rect(cr: &cairo::Context, x: f64, y: f64, w: f64, h: f64, r: f64) {

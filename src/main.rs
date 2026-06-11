@@ -4,11 +4,11 @@
 //! compiled GResource bundle, constructs the `Adw.Application`, installs the
 //! application-scoped `GAction`s, and hands control to the GLib main loop.
 
+// The parser, renderer, token and document modules live in the `swatchbook`
+// library crate (see `lib.rs`) so they compile once and stay unit-testable.
+// `config` is generated per-build and `window` pulls in GTK, so both remain
+// binary-local modules.
 mod config;
-mod document;
-mod parser;
-mod renderer;
-mod token;
 mod window;
 
 use adw::prelude::*;

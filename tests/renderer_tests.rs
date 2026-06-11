@@ -82,7 +82,7 @@ fn content_height_consistent_with_layout_last_rect() {
 // ── to_css_variables() ──────────────────────────────────────────────────────
 
 fn item(name: &str, hex: &str, r: u8, g: u8, b: u8) -> SwatchItem {
-    SwatchItem { name: name.to_string(), hex: hex.to_string(), r, g, b }
+    SwatchItem { name: name.to_string(), hex: hex.to_string(), r, g, b, a: 255 }
 }
 
 #[test]
