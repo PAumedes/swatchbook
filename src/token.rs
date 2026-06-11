@@ -135,7 +135,11 @@ fn parse_hsl(inner: &str) -> Option<ColorValue> {
     if parts.len() != 3 && parts.len() != 4 {
         return None;
     }
-    let h = parts[0].trim().trim_end_matches("deg").parse::<f64>().ok()?;
+    let h = parts[0]
+        .trim()
+        .trim_end_matches("deg")
+        .parse::<f64>()
+        .ok()?;
     let s = parts[1].trim().trim_end_matches('%').parse::<f64>().ok()? / 100.0;
     let l = parts[2].trim().trim_end_matches('%').parse::<f64>().ok()? / 100.0;
     let a = match parts.get(3) {
@@ -172,7 +176,11 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (u8, u8, u8) {
         return (v, v, v);
     }
 
-    let q = if l < 0.5 { l * (1.0 + s) } else { l + s - l * s };
+    let q = if l < 0.5 {
+        l * (1.0 + s)
+    } else {
+        l + s - l * s
+    };
     let p = 2.0 * l - q;
     let to_u8 = |t: f64| (hue_to_channel(p, q, t) * 255.0).round() as u8;
     (to_u8(h + 1.0 / 3.0), to_u8(h), to_u8(h - 1.0 / 3.0))
@@ -192,7 +200,10 @@ fn hue_to_channel(p: f64, q: f64, t: f64) -> f64 {
 }
 
 fn named_to_rgb(name: &str) -> (u8, u8, u8) {
-    CSS_NAMED_COLORS.get(name).copied().unwrap_or((128, 128, 128))
+    CSS_NAMED_COLORS
+        .get(name)
+        .copied()
+        .unwrap_or((128, 128, 128))
 }
 
 // ── WCAG contrast ─────────────────────────────────────────────────────────────

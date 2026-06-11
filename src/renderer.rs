@@ -155,14 +155,27 @@ pub fn render(
         // Hex label
         let (sr, sg, sb) = secondary_rgb;
         cr.set_source_rgba(sr, sg, sb, secondary_a);
-        draw_text(cr, &item.hex, rect.x, text_y + LABEL_H + LABEL_GAP, rect.w, 10.0, false);
+        draw_text(
+            cr,
+            &item.hex,
+            rect.x,
+            text_y + LABEL_H + LABEL_GAP,
+            rect.w,
+            10.0,
+            false,
+        );
     }
 }
 
 // ── Export ───────────────────────────────────────────────────────────────────
 
 /// Render swatches to a PNG file at 2× resolution.
-pub fn export_png(items: &[SwatchItem], width: u32, height: u32, path: &std::path::Path) -> Result<(), String> {
+pub fn export_png(
+    items: &[SwatchItem],
+    width: u32,
+    height: u32,
+    path: &std::path::Path,
+) -> Result<(), String> {
     let scale = 2.0_f64;
     let surf = cairo::ImageSurface::create(
         cairo::Format::Rgb24,
@@ -180,12 +193,18 @@ pub fn export_png(items: &[SwatchItem], width: u32, height: u32, path: &std::pat
     render(&cr, items, width as f64, height as f64, false, None);
 
     let mut file = std::fs::File::create(path).map_err(|e| format!("create file: {e}"))?;
-    surf.write_to_png(&mut file).map_err(|e| format!("write png: {e}"))?;
+    surf.write_to_png(&mut file)
+        .map_err(|e| format!("write png: {e}"))?;
     Ok(())
 }
 
 /// Render swatches to an SVG file.
-pub fn export_svg(items: &[SwatchItem], width: u32, height: u32, path: &std::path::Path) -> Result<(), String> {
+pub fn export_svg(
+    items: &[SwatchItem],
+    width: u32,
+    height: u32,
+    path: &std::path::Path,
+) -> Result<(), String> {
     let surf = cairo::SvgSurface::new(width as f64, height as f64, Some(path))
         .map_err(|e| format!("create svg surface: {e}"))?;
 
@@ -212,7 +231,8 @@ pub fn to_css_variables(items: &[SwatchItem]) -> String {
 
     for item in items {
         // Split on non-alphanumeric runs so "Hello  World" → "hello-world" (no double dash).
-        let base: String = item.name
+        let base: String = item
+            .name
             .to_lowercase()
             .split(|c: char| !c.is_alphanumeric())
             .filter(|part| !part.is_empty())
@@ -240,7 +260,15 @@ pub fn to_css_variables(items: &[SwatchItem]) -> String {
     out
 }
 
-fn draw_text(cr: &cairo::Context, text: &str, x: f64, y: f64, max_w: f64, size_pt: f64, bold: bool) {
+fn draw_text(
+    cr: &cairo::Context,
+    text: &str,
+    x: f64,
+    y: f64,
+    max_w: f64,
+    size_pt: f64,
+    bold: bool,
+) {
     let layout = pc::create_layout(cr);
     let mut desc = pango::FontDescription::new();
     desc.set_size((size_pt * pango::SCALE as f64) as i32);
@@ -273,7 +301,12 @@ fn draw_checkerboard(cr: &cairo::Context, rect: &SwatchRect) {
             if (row + col) % 2 == 0 {
                 continue;
             }
-            cr.rectangle(rect.x + col as f64 * CELL, rect.y + row as f64 * CELL, CELL, CELL);
+            cr.rectangle(
+                rect.x + col as f64 * CELL,
+                rect.y + row as f64 * CELL,
+                CELL,
+                CELL,
+            );
         }
     }
     let _ = cr.fill();
@@ -283,9 +316,9 @@ fn rounded_rect(cr: &cairo::Context, x: f64, y: f64, w: f64, h: f64, r: f64) {
     use std::f64::consts::PI;
     let r = r.min(w / 2.0).min(h / 2.0).max(0.0);
     cr.new_sub_path();
-    cr.arc(x + w - r, y + r,     r, -0.5 * PI, 0.0);
-    cr.arc(x + w - r, y + h - r, r,  0.0,      0.5 * PI);
-    cr.arc(x + r,     y + h - r, r,  0.5 * PI, PI);
-    cr.arc(x + r,     y + r,     r,  PI,        1.5 * PI);
+    cr.arc(x + w - r, y + r, r, -0.5 * PI, 0.0);
+    cr.arc(x + w - r, y + h - r, r, 0.0, 0.5 * PI);
+    cr.arc(x + r, y + h - r, r, 0.5 * PI, PI);
+    cr.arc(x + r, y + r, r, PI, 1.5 * PI);
     cr.close_path();
 }

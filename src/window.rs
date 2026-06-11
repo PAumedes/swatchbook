@@ -129,7 +129,10 @@ impl SwatchbookWindow {
 
     fn setup_settings(&self) {
         let settings = gio::Settings::new(crate::config::APP_ID);
-        self.imp().settings.set(settings).expect("settings set once");
+        self.imp()
+            .settings
+            .set(settings)
+            .expect("settings set once");
     }
 
     fn settings(&self) -> &gio::Settings {
@@ -162,7 +165,9 @@ impl SwatchbookWindow {
         let window_weak = self.downgrade();
 
         imp.canvas.set_draw_func(move |_area, cr, width, height| {
-            let Some(win) = window_weak.upgrade() else { return };
+            let Some(win) = window_weak.upgrade() else {
+                return;
+            };
             let items = win.imp().swatches.borrow();
             let focused = *win.imp().focused_swatch.borrow();
             let dark = style_manager.is_dark();
@@ -173,7 +178,9 @@ impl SwatchbookWindow {
         // content_height calculation uses the real width, not the initial guess.
         let win_weak = self.downgrade();
         imp.canvas.connect_resize(move |canvas, width, _height| {
-            let Some(win) = win_weak.upgrade() else { return };
+            let Some(win) = win_weak.upgrade() else {
+                return;
+            };
             let count = win.imp().swatches.borrow().len();
             let h = renderer::content_height(count, width as f64).ceil() as i32;
             canvas.set_content_height(h.max(360));
@@ -190,7 +197,9 @@ impl SwatchbookWindow {
         let click = gtk::GestureClick::new();
         let win_weak_click = self.downgrade();
         click.connect_pressed(move |_, _, x, y| {
-            let Some(win) = win_weak_click.upgrade() else { return };
+            let Some(win) = win_weak_click.upgrade() else {
+                return;
+            };
             win.imp().canvas.grab_focus();
             if let Some(idx) = win.swatch_at(x, y) {
                 *win.imp().focused_swatch.borrow_mut() = Some(idx);
@@ -218,17 +227,18 @@ impl SwatchbookWindow {
 
             match key {
                 gdk::Key::Right | gdk::Key::Down => {
-                    let next = imp
-                        .focused_swatch
-                        .borrow()
-                        .map_or(0, |i| (i + 1) % count);
+                    let next = imp.focused_swatch.borrow().map_or(0, |i| (i + 1) % count);
                     *imp.focused_swatch.borrow_mut() = Some(next);
                     imp.canvas.queue_draw();
                     glib::Propagation::Stop
                 }
                 gdk::Key::Left | gdk::Key::Up => {
                     let prev = imp.focused_swatch.borrow().map_or(count - 1, |i| {
-                        if i == 0 { count - 1 } else { i - 1 }
+                        if i == 0 {
+                            count - 1
+                        } else {
+                            i - 1
+                        }
                     });
                     *imp.focused_swatch.borrow_mut() = Some(prev);
                     imp.canvas.queue_draw();
@@ -257,7 +267,9 @@ impl SwatchbookWindow {
         let buffer = self.imp().editor.buffer();
 
         buffer.connect_changed(move |buf| {
-            let Some(win) = window_weak.upgrade() else { return };
+            let Some(win) = window_weak.upgrade() else {
+                return;
+            };
             let imp = win.imp();
 
             imp.document.borrow_mut().is_modified = true;
@@ -317,16 +329,24 @@ impl SwatchbookWindow {
         let mut focused = self.imp().focused_swatch.borrow_mut();
         if let Some(idx) = *focused {
             if idx >= new_count {
-                *focused = if new_count == 0 { None } else { Some(new_count - 1) };
+                *focused = if new_count == 0 {
+                    None
+                } else {
+                    Some(new_count - 1)
+                };
             }
         }
         self.imp().canvas.set_content_height(canvas_h.max(360));
 
         if has_swatches {
-            self.imp().canvas_stack.set_visible_child(&*self.imp().canvas_scroll);
+            self.imp()
+                .canvas_stack
+                .set_visible_child(&*self.imp().canvas_scroll);
             self.imp().canvas.queue_draw();
         } else {
-            self.imp().canvas_stack.set_visible_child(&*self.imp().status_page);
+            self.imp()
+                .canvas_stack
+                .set_visible_child(&*self.imp().status_page);
         }
     }
 
@@ -390,10 +410,7 @@ impl SwatchbookWindow {
                 self.imp().document.borrow_mut().is_modified = false;
                 self.update_title();
             }
-            Err(e) => self.show_error(
-                &gettextrs::gettext("Could not open file"),
-                &e.to_string(),
-            ),
+            Err(e) => self.show_error(&gettextrs::gettext("Could not open file"), &e.to_string()),
         }
     }
 

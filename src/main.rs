@@ -35,8 +35,7 @@ fn main() -> glib::ExitCode {
         .expect("Unable to bind the gettext text domain");
     gettextrs::bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8")
         .expect("Unable to set the gettext codeset to UTF-8");
-    gettextrs::textdomain(GETTEXT_PACKAGE)
-        .expect("Unable to switch to the gettext text domain");
+    gettextrs::textdomain(GETTEXT_PACKAGE).expect("Unable to switch to the gettext text domain");
 
     glib::set_application_name("Swatchbook");
 
@@ -44,8 +43,8 @@ fn main() -> glib::ExitCode {
     // Load and register the GResource bundle that contains the compiled
     // Blueprint UI (window.ui) before any template is instantiated.
     let resource_path = format!("{PKGDATADIR}/swatchbook.gresource");
-    let resources = gio::Resource::load(&resource_path)
-        .expect("Failed to load the compiled GResource bundle");
+    let resources =
+        gio::Resource::load(&resource_path).expect("Failed to load the compiled GResource bundle");
     gio::resources_register(&resources);
 
     // -- Application -------------------------------------------------------
@@ -123,13 +122,13 @@ fn setup_gactions(app: &adw::Application) {
 
 /// Binds keyboard accelerators to their actions.
 fn setup_accels(app: &adw::Application) {
-    app.set_accels_for_action("app.quit",        &["<Control>q"]);
-    app.set_accels_for_action("app.new-canvas",  &["<Control>n"]);
-    app.set_accels_for_action("win.open",        &["<Control>o"]);
-    app.set_accels_for_action("win.save",        &["<Control>s"]);
-    app.set_accels_for_action("win.save-as",     &["<Control><Shift>s"]);
-    app.set_accels_for_action("win.export-png",  &["<Control><Shift>e"]);
-    app.set_accels_for_action("win.copy-css",    &["<Control><Shift>c"]);
+    app.set_accels_for_action("app.quit", &["<Control>q"]);
+    app.set_accels_for_action("app.new-canvas", &["<Control>n"]);
+    app.set_accels_for_action("win.open", &["<Control>o"]);
+    app.set_accels_for_action("win.save", &["<Control>s"]);
+    app.set_accels_for_action("win.save-as", &["<Control><Shift>s"]);
+    app.set_accels_for_action("win.export-png", &["<Control><Shift>e"]);
+    app.set_accels_for_action("win.copy-css", &["<Control><Shift>c"]);
 }
 
 /// Constructs a fresh main window and presents it. Used both for normal
@@ -145,7 +144,9 @@ fn build_window(app: &adw::Application) {
 /// This must be called before `setlocale()`.  We guard against missing schemas
 /// (dev builds before `meson install`) so the app never panics cold.
 fn apply_language_preference() {
-    let Some(source) = gio::SettingsSchemaSource::default() else { return };
+    let Some(source) = gio::SettingsSchemaSource::default() else {
+        return;
+    };
     if source.lookup(APP_ID, true).is_none() {
         return;
     }
@@ -210,9 +211,7 @@ fn show_preferences(app: &adw::Application) {
         build_window(&app_clone);
     });
 
-    let group = adw::PreferencesGroup::builder()
-        .title("Language")
-        .build();
+    let group = adw::PreferencesGroup::builder().title("Language").build();
     group.add(&row);
 
     let page = adw::PreferencesPage::new();

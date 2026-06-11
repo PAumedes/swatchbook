@@ -82,7 +82,14 @@ fn content_height_consistent_with_layout_last_rect() {
 // ── to_css_variables() ──────────────────────────────────────────────────────
 
 fn item(name: &str, hex: &str, r: u8, g: u8, b: u8) -> SwatchItem {
-    SwatchItem { name: name.to_string(), hex: hex.to_string(), r, g, b, a: 255 }
+    SwatchItem {
+        name: name.to_string(),
+        hex: hex.to_string(),
+        r,
+        g,
+        b,
+        a: 255,
+    }
 }
 
 #[test]
@@ -99,7 +106,10 @@ fn css_variables_collapses_spaces_to_single_dash() {
     let items = vec![item("Hello  World", "#ffffff", 255, 255, 255)];
     let css = to_css_variables(&items);
     assert!(css.contains("--color-hello-world:"), "got: {css}");
-    assert!(!css.contains("--color-hello--world:"), "must not have double dash: {css}");
+    assert!(
+        !css.contains("--color-hello--world:"),
+        "must not have double dash: {css}"
+    );
 }
 
 #[test]
@@ -118,9 +128,18 @@ fn css_variables_deduplicates_names() {
         item("Primary", "#0000ff", 0, 0, 255),
     ];
     let css = to_css_variables(&items);
-    assert!(css.contains("--color-primary:"),   "first occurrence, got: {css}");
-    assert!(css.contains("--color-primary-2:"), "second occurrence, got: {css}");
-    assert!(css.contains("--color-primary-3:"), "third occurrence, got: {css}");
+    assert!(
+        css.contains("--color-primary:"),
+        "first occurrence, got: {css}"
+    );
+    assert!(
+        css.contains("--color-primary-2:"),
+        "second occurrence, got: {css}"
+    );
+    assert!(
+        css.contains("--color-primary-3:"),
+        "third occurrence, got: {css}"
+    );
 }
 
 #[test]
