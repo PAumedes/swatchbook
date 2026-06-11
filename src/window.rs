@@ -264,6 +264,8 @@ impl SwatchbookWindow {
     // ── Editor / live-preview pipeline ────────────────────────────────────────
 
     fn setup_editor(&self) {
+        self.setup_highlight_tags();
+
         let window_weak = self.downgrade();
         let buffer = self.imp().editor.buffer();
 
@@ -285,6 +287,10 @@ impl SwatchbookWindow {
 
             let (start, end) = buf.bounds();
             let text = buf.text(&start, &end, false).to_string();
+
+            // Highlight immediately — it's cheap and makes the editor feel responsive.
+            win.highlight(&text);
+
             let window_weak2 = win.downgrade();
 
             // Re-parse 150 ms after the last keystroke.
@@ -459,6 +465,7 @@ impl SwatchbookWindow {
                 self.imp().editor.buffer().set_text(&content);
                 self.imp().document.borrow_mut().is_modified = false;
                 self.update_title();
+                self.register_recent(path);
             }
             Err(e) => self.show_error(&gettextrs::gettext("Could not open file"), &e.to_string()),
         }
@@ -479,6 +486,10 @@ impl SwatchbookWindow {
         self.imp().document.borrow_mut().content = text;
         if let Err(e) = self.imp().document.borrow_mut().save() {
             self.show_error(&gettextrs::gettext("Could not save file"), &e.to_string());
+            return;
+        }
+        if let Some(path) = self.imp().document.borrow().path.clone() {
+            self.register_recent(&path);
         }
         self.update_title();
     }
@@ -505,8 +516,10 @@ impl SwatchbookWindow {
                     let (start, end) = buf.bounds();
                     let text = buf.text(&start, &end, false).to_string();
                     win.imp().document.borrow_mut().content = text;
-                    if let Err(e) = win.imp().document.borrow_mut().save_to(path) {
+                    if let Err(e) = win.imp().document.borrow_mut().save_to(path.clone()) {
                         win.show_error(&gettextrs::gettext("Could not save file"), &e.to_string());
+                    } else {
+                        win.register_recent(&path);
                     }
                     win.update_title();
                 }
@@ -532,6 +545,82 @@ impl SwatchbookWindow {
         let count = self.imp().cards.borrow().len();
         let h = renderer::content_height(count, w as f64).ceil() as u32;
         (w, h.max(360))
+    }
+
+    fn setup_highlight_tags(&self) {
+        let table = self.imp().editor.buffer().tag_table();
+
+        // Heading lines (starting with #) — bold.
+        let heading = gtk::TextTag::new(Some("sb-heading"));
+        heading.set_property("weight", 700i32); // pango::Weight::Bold
+        table.add(&heading);
+
+        // Inline code spans (`...`) — Adwaita purple, monospace.
+        let code = gtk::TextTag::new(Some("sb-code"));
+        code.set_property("foreground", "#7764d8");
+        code.set_property("family", "monospace");
+        table.add(&code);
+    }
+
+    /// Apply heading and code-span highlighting to the editor buffer.
+    ///
+    /// Runs on every keystroke (before the reparse debounce) so edits feel
+    /// immediate. Does not trigger a `changed` signal, so no re-entrancy risk.
+    fn highlight(&self, text: &str) {
+        let buf = self.imp().editor.buffer();
+        let table = buf.tag_table();
+
+        // Clear previous highlights.
+        let (doc_start, doc_end) = buf.bounds();
+        for name in ["sb-heading", "sb-code"] {
+            if let Some(tag) = table.lookup(name) {
+                buf.remove_tag(&tag, &doc_start, &doc_end);
+            }
+        }
+
+        for (line_no, line) in text.lines().enumerate() {
+            let li = line_no as i32;
+
+            // Heading: bold the whole line.
+            if line.starts_with('#') {
+                if let Some(ls) = buf.iter_at_line(li) {
+                    let mut le = ls.clone();
+                    le.forward_to_line_end();
+                    if let Some(tag) = table.lookup("sb-heading") {
+                        buf.apply_tag(&tag, &ls, &le);
+                    }
+                }
+            }
+
+            // Code spans: colour each `...` pair on the line.
+            let chars: Vec<char> = line.chars().collect();
+            let n = chars.len();
+            let mut ci = 0usize;
+            while ci < n {
+                if chars[ci] == '`' && ci + 1 < n {
+                    if let Some(offset) = chars[ci + 1..].iter().position(|&c| c == '`') {
+                        let cs = ci as i32;
+                        let ce = (ci + offset + 2) as i32;
+                        if let (Some(ts), Some(te)) = (
+                            buf.iter_at_line_offset(li, cs),
+                            buf.iter_at_line_offset(li, ce),
+                        ) {
+                            if let Some(tag) = table.lookup("sb-code") {
+                                buf.apply_tag(&tag, &ts, &te);
+                            }
+                        }
+                        ci += offset + 2;
+                        continue;
+                    }
+                }
+                ci += 1;
+            }
+        }
+    }
+
+    fn register_recent(&self, path: &std::path::Path) {
+        let uri = gio::File::for_path(path).uri();
+        gtk::RecentManager::default().add_item(&uri);
     }
 
     fn show_toast(&self, message: &str) {
@@ -844,8 +933,8 @@ impl SwatchbookWindow {
              ## Shadow\n\n\
              - **card** — `shadow: 0 2px 8px rgba(0,0,0,0.12)`\n\
              - **modal** — `shadow: 0 8px 24px rgba(0,0,0,0.2)`\n";
-        // set_text fires `changed` synchronously; reset the flag so a fresh
-        // window doesn't start life with the unsaved-changes bullet.
+        // set_text fires `changed` synchronously (which calls highlight() and
+        // starts the debounce timer). Reset the modified flag immediately.
         buf.set_text(text);
         self.imp().document.borrow_mut().is_modified = false;
         self.update_title();

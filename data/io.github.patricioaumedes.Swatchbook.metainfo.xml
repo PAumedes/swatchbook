@@ -9,28 +9,33 @@
 
   <description>
     <p>
-      Swatchbook lets you write colour palettes, typography specs, and design
-      tokens in plain Markdown and renders them as an interactive, shareable
-      swatch canvas — right inside a native GNOME window.
+      Swatchbook is a Markdown-powered design-token binder for GNOME. Write
+      colour palettes, typography scales, spacing systems, border radii, and
+      shadow definitions in plain <code>.md</code> files and watch them render
+      as an interactive canvas in real time.
     </p>
     <p>
-      Type a colour name and hex value in the editor; the canvas updates live.
-      Save your binder as a plain <code>.md</code> file you can open in any
-      editor or share with your team.
+      Every inline-code span in a list item becomes a live token card. Click
+      any card to copy its value to the clipboard.
     </p>
     <ul>
-      <li>Live Markdown-to-swatch preview with 150 ms debounce</li>
-      <li>Supports <code>#rrggbb</code>, <code>#rgb</code>, <code>rgb()</code>, and CSS named colours</li>
-      <li>Sections map to headed groups of swatches</li>
-      <li>Open, save, and save-as with native file dialogs</li>
-      <li>Auto-save every 30 seconds with crash recovery</li>
-      <li>Dark mode — follows the system colour scheme automatically</li>
-      <li>Responsive layout — collapses to single-column on narrow displays</li>
+      <li>Colours: <code>#rrggbb</code>, <code>#rgba</code>, <code>rgb()</code>, <code>rgba()</code>, <code>hsl()</code>, all 148 CSS named colours, and <code>transparent</code></li>
+      <li>Typography: <code>font: Family Bold 16px/1.5</code> — renders a live "Ag" type specimen via Pango</li>
+      <li>Spacing: bare size values like <code>8px</code> or <code>0.5rem</code> — rendered as a measured bar</li>
+      <li>Radius: <code>radius: 6px</code> — rendered as a rounded box preview</li>
+      <li>Shadows: <code>shadow: 0 2px 8px rgba(0,0,0,0.12)</code> — rendered as a layered card preview</li>
+      <li>WCAG contrast checking built in — AA / AAA levels computed from colour tokens</li>
+      <li>Export to PNG, SVG, W3C JSON design tokens, GIMP palette, CSS custom properties, and Tailwind config</li>
+      <li>Click to copy any token value; keyboard arrow-key navigation on the canvas</li>
+      <li>Syntax-highlighted Markdown editor with live 150 ms preview debounce</li>
+      <li>Auto-save every 30 s with crash recovery</li>
+      <li>Dark mode, responsive split-view layout, multi-window support</li>
+      <li>Registered with the system's recent-files list on open and save</li>
     </ul>
     <p xml:lang="es">
-      Swatchbook te permite escribir paletas de colores, especificaciones
-      tipográficas y tokens de diseño en Markdown simple, y los renderiza como
-      un lienzo interactivo de muestras dentro de una ventana nativa de GNOME.
+      Swatchbook te permite escribir paletas de colores, tipografías, espaciados,
+      radios de borde y sombras en Markdown simple, y los renderiza como fichas
+      interactivas dentro de una ventana nativa de GNOME.
     </p>
   </description>
 
@@ -96,6 +101,11 @@
   </branding>
 
   <releases>
+    <release version="1.1.0" date="2026-06-11">
+      <description>
+        <p>Full design-token support: Font, Spacing, Radius, and Shadow cards join Colour swatches. Export to W3C JSON design tokens, GIMP palette, and Tailwind config. Live syntax highlighting in the editor. Recent-files integration. WCAG contrast checking. Full CSS colour support (148 named colours, rgba, hsl, transparent, alpha hex).</p>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-06-10">
       <description>
         <p>Live language switching, restricted Flatpak permissions, Flathub screenshots</p>
