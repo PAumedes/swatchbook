@@ -101,6 +101,11 @@
   </branding>
 
   <releases>
+    <release version="1.1.0" date="2026-06-12">
+      <description>
+        <p>Full design-token support: Font, Space, Radius, Shadow; ASE/GPL/JSON export and import; syntax highlighting; recent files; preferences debounce; WCAG contrast; full CSS colour support</p>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-06-10">
       <description>
         <p>Live language switching, restricted Flatpak permissions, Flathub screenshots</p>

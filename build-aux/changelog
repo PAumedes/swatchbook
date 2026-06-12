@@ -1,3 +1,9 @@
+swatchbook (1.1.0) noble; urgency=medium
+
+  * Full design-token support: Font, Space, Radius, Shadow; ASE/GPL/JSON export and import; syntax highlighting; recent files; preferences debounce; WCAG contrast; full CSS colour support
+
+ -- Patricio Aumedes <patricioaumedes@gmail.com>  Fri, 12 Jun 2026 13:31:05 -0300
+
 swatchbook (1.0.1) noble; urgency=medium
 
   * Live language switching, restricted Flatpak permissions, Flathub screenshots
