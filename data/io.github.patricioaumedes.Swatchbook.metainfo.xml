@@ -101,11 +101,6 @@
   </branding>
 
   <releases>
-    <release version="1.1.0" date="2026-06-11">
-      <description>
-        <p>Full design-token support: Font, Spacing, Radius, and Shadow cards join Colour swatches. Export to W3C JSON design tokens, GIMP palette, and Tailwind config. Live syntax highlighting in the editor. Recent-files integration. WCAG contrast checking. Full CSS colour support (148 named colours, rgba, hsl, transparent, alpha hex).</p>
-      </description>
-    </release>
     <release version="1.0.1" date="2026-06-10">
       <description>
         <p>Live language switching, restricted Flatpak permissions, Flathub screenshots</p>
