@@ -619,6 +619,331 @@ pub fn to_tailwind_config(cards: &[RenderCard]) -> String {
     out
 }
 
+/// Export colour tokens as an Adobe Swatch Exchange (`.ase`) binary file.
+///
+/// Non-colour tokens are silently skipped. Returns raw bytes ready to write to
+/// a file — the format is binary so it cannot be represented as a `String`.
+pub fn to_ase_palette(cards: &[RenderCard]) -> Vec<u8> {
+    let colors: Vec<&SwatchItem> = cards.iter().filter_map(|c| c.as_color()).collect();
+
+    let mut out = Vec::new();
+    out.extend_from_slice(b"ASEF");
+    out.extend_from_slice(&[0x00, 0x01, 0x00, 0x00]); // version 1.0
+    out.extend_from_slice(&(colors.len() as u32).to_be_bytes());
+
+    for item in &colors {
+        // Name as null-terminated UTF-16BE
+        let name_utf16: Vec<u16> = item.name.encode_utf16().chain(std::iter::once(0)).collect();
+        let name_bytes: Vec<u8> = name_utf16.iter().flat_map(|c| c.to_be_bytes()).collect();
+
+        // block content = name_len_field(2) + name_bytes + model(4) + rgb(12) + type(2)
+        let block_len = 2u32 + name_bytes.len() as u32 + 4 + 12 + 2;
+
+        out.extend_from_slice(&[0x00, 0x01]); // block type: color entry
+        out.extend_from_slice(&block_len.to_be_bytes());
+        out.extend_from_slice(&(name_utf16.len() as u16).to_be_bytes());
+        out.extend_from_slice(&name_bytes);
+        out.extend_from_slice(b"RGB ");
+        out.extend_from_slice(&(item.r as f32 / 255.0).to_be_bytes());
+        out.extend_from_slice(&(item.g as f32 / 255.0).to_be_bytes());
+        out.extend_from_slice(&(item.b as f32 / 255.0).to_be_bytes());
+        out.extend_from_slice(&[0x00, 0x02]); // color type: normal
+    }
+    out
+}
+
+/// Parse a GIMP palette (`.gpl`) file into a Markdown binder document.
+///
+/// Each color line becomes `- **Name** — \`#rrggbb\``. Non-color lines are
+/// silently ignored. Returns an empty document string on malformed input.
+pub fn gpl_to_markdown(content: &str) -> String {
+    let mut palette_name = "Imported Palette".to_string();
+    let mut lines: Vec<String> = Vec::new();
+    let mut in_colors = false;
+
+    for line in content.lines() {
+        if line.starts_with("GIMP Palette") || line.starts_with("Columns:") {
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("Name: ") {
+            palette_name = rest.trim().to_string();
+            continue;
+        }
+        if line.starts_with('#') {
+            in_colors = true;
+            continue;
+        }
+        if !in_colors {
+            continue;
+        }
+        // Color line format: "  R   G   B\tName"
+        let parts: Vec<&str> = line.splitn(2, '\t').collect();
+        if parts.len() < 2 {
+            continue;
+        }
+        let rgb: Vec<&str> = parts[0].split_whitespace().collect();
+        if rgb.len() < 3 {
+            continue;
+        }
+        let (Ok(r), Ok(g), Ok(b)) = (
+            rgb[0].parse::<u8>(),
+            rgb[1].parse::<u8>(),
+            rgb[2].parse::<u8>(),
+        ) else {
+            continue;
+        };
+        let name = parts[1].trim();
+        lines.push(format!("- **{name}** — `#{r:02x}{g:02x}{b:02x}`"));
+    }
+
+    format!("# {palette_name}\n\n{}\n", lines.join("\n"))
+}
+
+/// Parse a W3C Design Tokens JSON file into a Markdown binder document.
+///
+/// Supports the five token types Swatchbook knows: color, typography,
+/// dimension (spacing), borderRadius, and shadow. Unknown types are ignored.
+/// Returns `None` if the input is not valid JSON or has no recognized tokens.
+pub fn design_tokens_json_to_markdown(content: &str) -> Option<String> {
+    // Minimal recursive JSON value — avoids a serde_json dependency in the lib.
+    let tokens = parse_json_object(content)?;
+
+    let mut colors: Vec<String> = Vec::new();
+    let mut fonts: Vec<String> = Vec::new();
+    let mut spaces: Vec<String> = Vec::new();
+    let mut radii: Vec<String> = Vec::new();
+    let mut shadows: Vec<String> = Vec::new();
+
+    for (raw_key, type_str, value_str) in &tokens {
+        let name = kebab_to_title(raw_key);
+        match type_str.as_str() {
+            "color" => colors.push(format!("- **{name}** — `{value_str}`")),
+            "typography" => fonts.push(format!("- **{name}** — `{value_str}`")),
+            "dimension" => spaces.push(format!("- **{name}** — `{value_str}`")),
+            "borderRadius" => radii.push(format!("- **{name}** — `radius: {value_str}`")),
+            "shadow" => shadows.push(format!("- **{name}** — `shadow: {value_str}`")),
+            _ => {}
+        }
+    }
+
+    if colors.is_empty() && fonts.is_empty() && spaces.is_empty() && radii.is_empty() && shadows.is_empty() {
+        return None;
+    }
+
+    let mut md = String::from("# Imported Design Tokens\n\n");
+    let sections = [
+        ("Colors", &colors),
+        ("Typography", &fonts),
+        ("Spacing", &spaces),
+        ("Radius", &radii),
+        ("Shadows", &shadows),
+    ];
+    for (heading, items) in &sections {
+        if !items.is_empty() {
+            md.push_str(&format!("## {heading}\n\n"));
+            md.push_str(&items.join("\n"));
+            md.push_str("\n\n");
+        }
+    }
+    Some(md.trim_end().to_string() + "\n")
+}
+
+/// Naively extract `(key, $type, $value)` triples from a flat W3C tokens object.
+///
+/// This is a hand-rolled extractor that avoids a `serde_json` dependency.
+/// It handles the common case where all tokens are at the top level and
+/// `$value` is a simple string. Nested group objects are ignored.
+fn parse_json_object(src: &str) -> Option<Vec<(String, String, String)>> {
+    // Strip outer braces
+    let src = src.trim();
+    if !src.starts_with('{') || !src.ends_with('}') {
+        return None;
+    }
+    let inner = &src[1..src.len() - 1];
+
+    let mut results = Vec::new();
+
+    // Split into "key": { ... } chunks — works for flat W3C token files.
+    // We look for top-level "key" patterns, then grab the next {...} block.
+    let mut chars = inner.chars().peekable();
+    let mut current_key: Option<String> = None;
+
+    while chars.peek().is_some() {
+        skip_whitespace(&mut chars);
+        if chars.peek() == Some(&'"') {
+            let key = read_json_string(&mut chars)?;
+            skip_whitespace(&mut chars);
+            if chars.next() != Some(':') {
+                continue;
+            }
+            skip_whitespace(&mut chars);
+            if chars.peek() == Some(&'{') {
+                let obj_str = read_json_block(&mut chars, '{', '}')?;
+                if let (Some(type_v), Some(value_v)) =
+                    (extract_string_field(&obj_str, "$type"), extract_string_field(&obj_str, "$value"))
+                {
+                    results.push((key.clone(), type_v, value_v));
+                } else if extract_string_field(&obj_str, "$type").is_none() {
+                    // Could be a group — skip for now
+                }
+                current_key = Some(key);
+            } else {
+                // Skip non-object values
+                skip_json_value(&mut chars);
+            }
+        } else if chars.peek() == Some(&',') {
+            chars.next();
+        } else {
+            chars.next();
+        }
+    }
+    let _ = current_key; // silence unused warning
+    Some(results)
+}
+
+fn skip_whitespace(chars: &mut std::iter::Peekable<std::str::Chars>) {
+    while chars.peek().map(|c| c.is_whitespace()).unwrap_or(false) {
+        chars.next();
+    }
+}
+
+fn read_json_string(chars: &mut std::iter::Peekable<std::str::Chars>) -> Option<String> {
+    if chars.next() != Some('"') {
+        return None;
+    }
+    let mut s = String::new();
+    let mut escaped = false;
+    for c in chars.by_ref() {
+        if escaped {
+            s.push(c);
+            escaped = false;
+        } else if c == '\\' {
+            escaped = true;
+        } else if c == '"' {
+            return Some(s);
+        } else {
+            s.push(c);
+        }
+    }
+    None
+}
+
+fn read_json_block(
+    chars: &mut std::iter::Peekable<std::str::Chars>,
+    open: char,
+    close: char,
+) -> Option<String> {
+    if chars.next() != Some(open) {
+        return None;
+    }
+    let mut s = String::from(open);
+    let mut depth = 1i32;
+    let mut in_str = false;
+    let mut escaped = false;
+    for c in chars.by_ref() {
+        if escaped {
+            s.push(c);
+            escaped = false;
+            continue;
+        }
+        if c == '\\' && in_str {
+            escaped = true;
+            s.push(c);
+            continue;
+        }
+        if c == '"' {
+            in_str = !in_str;
+        }
+        if !in_str {
+            if c == open {
+                depth += 1;
+            } else if c == close {
+                depth -= 1;
+                if depth == 0 {
+                    s.push(c);
+                    return Some(s);
+                }
+            }
+        }
+        s.push(c);
+    }
+    None
+}
+
+fn skip_json_value(chars: &mut std::iter::Peekable<std::str::Chars>) {
+    skip_whitespace(chars);
+    match chars.peek() {
+        Some('"') => { let _ = read_json_string(chars); }
+        Some('{') => { let _ = read_json_block(chars, '{', '}'); }
+        Some('[') => { let _ = read_json_block(chars, '[', ']'); }
+        _ => { while !matches!(chars.peek(), Some(',') | Some('}') | None) { chars.next(); } }
+    }
+}
+
+/// Extract a plain string value for `key` from a flat JSON object string.
+fn extract_string_field(obj: &str, key: &str) -> Option<String> {
+    // Find `"key":` then the next `"value"`
+    let needle = format!("\"{}\"", key);
+    let pos = obj.find(&needle)?;
+    let rest = &obj[pos + needle.len()..];
+    let colon = rest.find(':')? + 1;
+    let after = rest[colon..].trim_start();
+    if after.starts_with('"') {
+        let mut chars = after.chars().peekable();
+        read_json_string(&mut chars)
+    } else if after.starts_with('{') {
+        // $value is an object (e.g. typography) — flatten to a font: spec
+        flatten_typography_value(after)
+    } else {
+        None
+    }
+}
+
+/// Convert a typography `$value` object into a `font:` token string.
+fn flatten_typography_value(obj: &str) -> Option<String> {
+    let family = extract_string_field(obj, "fontFamily").unwrap_or_else(|| "sans-serif".into());
+    let size = extract_string_field(obj, "fontSize").unwrap_or_else(|| "16px".into());
+    let weight_str = extract_string_field(obj, "fontWeight").unwrap_or_else(|| "400".into());
+    let weight: u64 = weight_str.parse().unwrap_or(400);
+    let weight_kw = weight_to_keyword(weight);
+    let lh = extract_string_field(obj, "lineHeight");
+
+    let mut spec = format!("font: {family} {weight_kw} {size}");
+    if let Some(lh) = lh {
+        spec.push('/');
+        spec.push_str(&lh);
+    }
+    Some(spec)
+}
+
+fn weight_to_keyword(w: u64) -> &'static str {
+    match w {
+        100 => "thin",
+        200 => "extralight",
+        300 => "light",
+        400 => "regular",
+        500 => "medium",
+        600 => "semibold",
+        700 => "bold",
+        800 => "extrabold",
+        900 => "black",
+        _ => "regular",
+    }
+}
+
+fn kebab_to_title(s: &str) -> String {
+    s.split(['-', '_'])
+        .map(|w| {
+            let mut c = w.chars();
+            match c.next() {
+                None => String::new(),
+                Some(f) => f.to_uppercase().to_string() + c.as_str(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// Build de-duplicated kebab-case slugs for a slice of cards.
 ///
 /// Duplicate base slugs get a numeric suffix (`primary`, `primary-2`, …).

@@ -11,7 +11,7 @@ use gtk::{gdk, gio, glib};
 
 use swatchbook::document::Document;
 use swatchbook::parser;
-use swatchbook::renderer::{self, RenderCard, SwatchItem};
+use swatchbook::renderer::{self, design_tokens_json_to_markdown, gpl_to_markdown, RenderCard, SwatchItem};
 use swatchbook::token::DesignToken;
 
 mod imp {
@@ -293,10 +293,11 @@ impl SwatchbookWindow {
 
             let window_weak2 = win.downgrade();
 
-            // Re-parse 150 ms after the last keystroke.
+            // Re-parse after the configured debounce delay (default 150 ms).
             // Clear debounce_id from inside the closure so the next keystroke
             // won't try to remove an already-fired source.
-            let id = glib::timeout_add_local(std::time::Duration::from_millis(150), move || {
+            let delay_ms = win.settings().uint("debounce-ms") as u64;
+            let id = glib::timeout_add_local(std::time::Duration::from_millis(delay_ms), move || {
                 if let Some(win) = window_weak2.upgrade() {
                     win.imp().debounce_id.borrow_mut().take();
                     win.reparse(&text);
@@ -417,6 +418,15 @@ impl SwatchbookWindow {
         let copy_tailwind = gio::ActionEntry::builder("copy-tailwind")
             .activate(|win: &Self, _, _| win.action_copy_tailwind())
             .build();
+        let export_ase = gio::ActionEntry::builder("export-ase")
+            .activate(|win: &Self, _, _| win.action_export_ase())
+            .build();
+        let import_gpl = gio::ActionEntry::builder("import-gpl")
+            .activate(|win: &Self, _, _| win.action_import_gpl())
+            .build();
+        let import_json = gio::ActionEntry::builder("import-json")
+            .activate(|win: &Self, _, _| win.action_import_json())
+            .build();
 
         self.add_action_entries([
             open,
@@ -428,6 +438,9 @@ impl SwatchbookWindow {
             export_json,
             export_gpl,
             copy_tailwind,
+            export_ase,
+            import_gpl,
+            import_json,
         ]);
     }
 
@@ -861,6 +874,110 @@ impl SwatchbookWindow {
             "Tailwind config with {color_count} colour{} copied.",
             if color_count == 1 { "" } else { "s" }
         ));
+    }
+
+    fn action_export_ase(&self) {
+        let cards = self.imp().cards.borrow();
+        let count = cards.iter().filter(|c| c.as_color().is_some()).count();
+        if count == 0 {
+            self.show_toast("No colour tokens to export.");
+            return;
+        }
+        let ase = renderer::to_ase_palette(&cards);
+        drop(cards);
+
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some("Adobe Swatch Exchange"));
+        filter.add_suffix("ase");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+
+        let dialog = gtk::FileDialog::builder()
+            .title("Export as ASE Palette")
+            .initial_name("palette.ase")
+            .filters(&filters)
+            .build();
+
+        let win = self.clone();
+        dialog.save(Some(self), gio::Cancellable::NONE, move |result| {
+            if let Ok(file) = result {
+                if let Some(path) = file.path() {
+                    match std::fs::write(&path, &ase) {
+                        Ok(()) => win.show_toast(&format!(
+                            "{count} colour{} exported as ASE.",
+                            if count == 1 { "" } else { "s" }
+                        )),
+                        Err(e) => win.show_toast(&format!("ASE export failed: {e}")),
+                    }
+                }
+            }
+        });
+    }
+
+    fn action_import_gpl(&self) {
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some("GIMP Palette"));
+        filter.add_suffix("gpl");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+
+        let dialog = gtk::FileDialog::builder()
+            .title("Import GIMP Palette")
+            .filters(&filters)
+            .build();
+
+        let win = self.clone();
+        dialog.open(Some(self), gio::Cancellable::NONE, move |result| {
+            if let Ok(file) = result {
+                if let Some(path) = file.path() {
+                    match std::fs::read_to_string(&path) {
+                        Ok(content) => {
+                            let md = gpl_to_markdown(&content);
+                            win.imp().editor.buffer().set_text(&md);
+                            win.imp().document.borrow_mut().is_modified = true;
+                            win.update_title();
+                            win.show_toast("GIMP palette imported.");
+                        }
+                        Err(e) => win.show_error("Could not read palette file", &e.to_string()),
+                    }
+                }
+            }
+        });
+    }
+
+    fn action_import_json(&self) {
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some("Design Tokens JSON"));
+        filter.add_suffix("json");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+
+        let dialog = gtk::FileDialog::builder()
+            .title("Import Design Tokens JSON")
+            .filters(&filters)
+            .build();
+
+        let win = self.clone();
+        dialog.open(Some(self), gio::Cancellable::NONE, move |result| {
+            if let Ok(file) = result {
+                if let Some(path) = file.path() {
+                    match std::fs::read_to_string(&path) {
+                        Ok(content) => match design_tokens_json_to_markdown(&content) {
+                            Some(md) => {
+                                win.imp().editor.buffer().set_text(&md);
+                                win.imp().document.borrow_mut().is_modified = true;
+                                win.update_title();
+                                win.show_toast("Design tokens imported.");
+                            }
+                            None => win.show_toast(
+                                "No recognised tokens found. Is this a W3C design tokens file?",
+                            ),
+                        },
+                        Err(e) => win.show_error("Could not read JSON file", &e.to_string()),
+                    }
+                }
+            }
+        });
     }
 
     fn update_title(&self) {

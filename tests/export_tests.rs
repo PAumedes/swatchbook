@@ -1,6 +1,6 @@
 use swatchbook::renderer::{
-    to_css_variables, to_design_tokens_json, to_gimp_palette, to_tailwind_config, RenderCard,
-    SwatchItem,
+    design_tokens_json_to_markdown, gpl_to_markdown, to_ase_palette, to_css_variables,
+    to_design_tokens_json, to_gimp_palette, to_tailwind_config, RenderCard, SwatchItem,
 };
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -222,6 +222,128 @@ fn tailwind_config_deduplicates() {
     let tw = to_tailwind_config(&cards);
     assert!(tw.contains("'brand'"), "got: {tw}");
     assert!(tw.contains("'brand-2'"), "got: {tw}");
+}
+
+// ── to_ase_palette ────────────────────────────────────────────────────────────
+
+#[test]
+fn ase_magic_and_version() {
+    let cards = vec![color("Red", "#ff0000", 255, 0, 0)];
+    let ase = to_ase_palette(&cards);
+    assert_eq!(&ase[0..4], b"ASEF", "magic bytes");
+    assert_eq!(&ase[4..8], &[0x00, 0x01, 0x00, 0x00], "version 1.0");
+}
+
+#[test]
+fn ase_block_count() {
+    let cards = vec![
+        color("Red", "#ff0000", 255, 0, 0),
+        color("Blue", "#0000ff", 0, 0, 255),
+    ];
+    let ase = to_ase_palette(&cards);
+    let count = u32::from_be_bytes(ase[8..12].try_into().unwrap());
+    assert_eq!(count, 2);
+}
+
+#[test]
+fn ase_skips_non_color() {
+    let cards = vec![
+        color("Red", "#ff0000", 255, 0, 0),
+        font("Body", "Inter", 16.0, 400),
+    ];
+    let ase = to_ase_palette(&cards);
+    let count = u32::from_be_bytes(ase[8..12].try_into().unwrap());
+    assert_eq!(count, 1, "font should be skipped");
+}
+
+#[test]
+fn ase_rgb_model_field() {
+    let cards = vec![color("A", "#112233", 0x11, 0x22, 0x33)];
+    let ase = to_ase_palette(&cards);
+    // Find "RGB " somewhere after the header
+    let has_rgb = ase.windows(4).any(|w| w == b"RGB ");
+    assert!(has_rgb, "should contain RGB  color model");
+}
+
+#[test]
+fn ase_empty_produces_header_only() {
+    let ase = to_ase_palette(&[]);
+    assert_eq!(ase.len(), 12, "header only: magic(4) + version(4) + count(4)");
+    let count = u32::from_be_bytes(ase[8..12].try_into().unwrap());
+    assert_eq!(count, 0);
+}
+
+// ── gpl_to_markdown ───────────────────────────────────────────────────────────
+
+#[test]
+fn gpl_basic_palette() {
+    let gpl = "GIMP Palette\nName: My Colors\nColumns: 5\n#\n255   0   0\tRed\n  0 128   0\tGreen\n";
+    let md = gpl_to_markdown(gpl);
+    assert!(md.contains("# My Colors"), "got: {md}");
+    assert!(md.contains("- **Red** — `#ff0000`"), "got: {md}");
+    assert!(md.contains("- **Green** — `#008000`"), "got: {md}");
+}
+
+#[test]
+fn gpl_default_name_when_missing() {
+    let gpl = "GIMP Palette\n#\n255   0   0\tRed\n";
+    let md = gpl_to_markdown(gpl);
+    assert!(md.contains("# Imported Palette"), "got: {md}");
+}
+
+#[test]
+fn gpl_skips_malformed_lines() {
+    let gpl = "GIMP Palette\nName: Test\n#\nnot a color line\n255 0 0\tValid\n";
+    let md = gpl_to_markdown(gpl);
+    // "not a color line" has no tab — should be ignored
+    assert!(md.contains("Valid"), "got: {md}");
+}
+
+// ── design_tokens_json_to_markdown ────────────────────────────────────────────
+
+#[test]
+fn json_import_color_token() {
+    let json = r##"{"primary": {"$type": "color", "$value": "#3482e3"}}"##;
+    let md = design_tokens_json_to_markdown(json).expect("should parse");
+    assert!(md.contains("## Colors"), "got: {md}");
+    assert!(md.contains("Primary"), "got: {md}");
+    assert!(md.contains("#3482e3"), "got: {md}");
+}
+
+#[test]
+fn json_import_dimension_token() {
+    let json = r#"{"gap-md": {"$type": "dimension", "$value": "8px"}}"#;
+    let md = design_tokens_json_to_markdown(json).expect("should parse");
+    assert!(md.contains("## Spacing"), "got: {md}");
+    assert!(md.contains("Gap Md"), "got: {md}");
+    assert!(md.contains("8px"), "got: {md}");
+}
+
+#[test]
+fn json_import_radius_token() {
+    let json = r#"{"btn": {"$type": "borderRadius", "$value": "6px"}}"#;
+    let md = design_tokens_json_to_markdown(json).expect("should parse");
+    assert!(md.contains("radius: 6px"), "got: {md}");
+}
+
+#[test]
+fn json_import_shadow_token() {
+    let json = r#"{"card": {"$type": "shadow", "$value": "0 2px 8px rgba(0,0,0,0.12)"}}"#;
+    let md = design_tokens_json_to_markdown(json).expect("should parse");
+    assert!(md.contains("shadow: 0 2px 8px rgba(0,0,0,0.12)"), "got: {md}");
+}
+
+#[test]
+fn json_import_returns_none_for_empty_object() {
+    let md = design_tokens_json_to_markdown("{}");
+    assert!(md.is_none(), "empty object should return None");
+}
+
+#[test]
+fn json_import_kebab_to_title_case() {
+    let json = r##"{"font-body-base": {"$type": "color", "$value": "#000"}}"##;
+    let md = design_tokens_json_to_markdown(json).expect("should parse");
+    assert!(md.contains("Font Body Base"), "got: {md}");
 }
 
 // ── to_css_variables (regression — ensure it still works) ─────────────────────

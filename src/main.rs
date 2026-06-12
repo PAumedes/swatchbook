@@ -157,11 +157,13 @@ fn apply_language_preference() {
     }
 }
 
-/// Opens the Preferences window, currently limited to language selection.
+/// Opens the Preferences window (language + editor settings).
 fn show_preferences(app: &adw::Application) {
     const CODES: &[&str] = &["", "en", "es", "fr", "de"];
 
     let settings = gio::Settings::new(APP_ID);
+
+    // ── Language row ──────────────────────────────────────────────────────────
     let current = settings.string("language");
     let selected = CODES
         .iter()
@@ -176,23 +178,21 @@ fn show_preferences(app: &adw::Application) {
         "Deutsch",
     ]);
 
-    let row = adw::ComboRow::builder()
+    let lang_row = adw::ComboRow::builder()
         .title("Language")
         .model(&model)
         .selected(selected)
         .build();
 
+    let settings_lang = settings.clone();
     let app_clone = app.clone();
-    row.connect_selected_notify(move |row| {
+    lang_row.connect_selected_notify(move |row| {
         let code = CODES.get(row.selected() as usize).copied().unwrap_or("");
-        // Guard against the initial notify that fires when selected is set.
-        if code == settings.string("language").as_str() {
+        if code == settings_lang.string("language").as_str() {
             return;
         }
-        settings.set_string("language", code).ok();
+        settings_lang.set_string("language", code).ok();
 
-        // Update the locale env var and re-initialise gettext so subsequent
-        // widget construction picks up the new translations.
         if code.is_empty() {
             std::env::remove_var("LANGUAGE");
         } else {
@@ -203,19 +203,42 @@ fn show_preferences(app: &adw::Application) {
         let _ = gettextrs::bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
         let _ = gettextrs::textdomain(GETTEXT_PACKAGE);
 
-        // Close every window (including this prefs window) then open a fresh
-        // main window whose widgets will use the new locale.
         for window in app_clone.windows() {
             window.close();
         }
         build_window(&app_clone);
     });
 
-    let group = adw::PreferencesGroup::builder().title("Language").build();
-    group.add(&row);
+    let lang_group = adw::PreferencesGroup::builder().title("Language").build();
+    lang_group.add(&lang_row);
 
+    // ── Editor row ────────────────────────────────────────────────────────────
+    let adj = gtk::Adjustment::new(
+        settings.uint("debounce-ms") as f64,
+        50.0,
+        2000.0,
+        10.0,
+        100.0,
+        0.0,
+    );
+    // Bind adjustment value → GSettings so changes persist automatically.
+    settings
+        .bind("debounce-ms", &adj, "value")
+        .build();
+
+    let debounce_row = adw::SpinRow::new(Some(&adj), 1.0, 0);
+    debounce_row.set_title("Preview delay (ms)");
+    debounce_row.set_subtitle(
+        "Milliseconds after the last keystroke before the canvas updates",
+    );
+
+    let editor_group = adw::PreferencesGroup::builder().title("Editor").build();
+    editor_group.add(&debounce_row);
+
+    // ── Window ────────────────────────────────────────────────────────────────
     let page = adw::PreferencesPage::new();
-    page.add(&group);
+    page.add(&lang_group);
+    page.add(&editor_group);
 
     let prefs_win = adw::PreferencesWindow::builder()
         .title("Preferences")

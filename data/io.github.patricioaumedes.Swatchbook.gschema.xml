@@ -42,6 +42,17 @@
       </description>
     </key>
 
+    <key name="debounce-ms" type="u">
+      <default>150</default>
+      <range min="50" max="2000"/>
+      <summary>Preview debounce delay in milliseconds</summary>
+      <description>
+        How long to wait after the last keystroke before re-parsing the Markdown
+        and updating the canvas. Lower values feel more responsive; higher values
+        reduce CPU usage on large documents.
+      </description>
+    </key>
+
   </schema>
 
 </schemalist>

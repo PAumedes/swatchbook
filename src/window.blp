@@ -153,6 +153,11 @@ menu primary_menu {
     }
 
     item {
+      label: _("Export as _ASE Palette…");
+      action: "win.export-ase";
+    }
+
+    item {
       label: _("Copy CSS _Variables");
       action: "win.copy-css";
     }
@@ -160,6 +165,18 @@ menu primary_menu {
     item {
       label: _("Copy _Tailwind Config");
       action: "win.copy-tailwind";
+    }
+  }
+
+  section {
+    item {
+      label: _("Import _GIMP Palette…");
+      action: "win.import-gpl";
+    }
+
+    item {
+      label: _("Import Design _Tokens JSON…");
+      action: "win.import-json";
     }
   }
 
