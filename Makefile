@@ -1,9 +1,9 @@
 ##
 ## Swatchbook — developer convenience targets
 ##
-## All heavy lifting (compilation, packaging) runs inside the Incus container
-## via build-aux/incus-build.sh so no build dependencies need to be installed
-## locally.
+## All heavy lifting (compilation, packaging) runs inside the Incus container.
+## Uses incus-build (the Rust CLI) when available, else falls back to the
+## legacy bash script.
 ##
 ## Usage:
 ##   make               → show this help
@@ -14,8 +14,17 @@
 
 CONTAINER     := swatchbook-builder
 PROJECT_DIR   := $(shell pwd)
-INCUS_BUILD   := bash $(PROJECT_DIR)/build-aux/incus-build.sh
 INCUS_EXEC    := incus exec $(CONTAINER) --
+
+# Prefer the compiled incus-build CLI; fall back to the legacy bash script.
+INCUS_BUILD_BIN := $(shell command -v incus-build 2>/dev/null)
+ifeq ($(INCUS_BUILD_BIN),)
+  INCUS_BUILD := bash $(PROJECT_DIR)/build-aux/incus-build.sh
+  INCUS_UP    := bash $(PROJECT_DIR)/build-aux/incus-build.sh
+else
+  INCUS_BUILD := incus-build build
+  INCUS_UP    := incus-build up
+endif
 
 # Colours for pretty output
 BOLD  := \033[1m
@@ -70,27 +79,17 @@ rebuild: clean build ## Clean then do a full build
 
 .PHONY: container-up
 container-up: ## Start the build container (create if missing)
-	@if ! incus list $(CONTAINER) --format csv | grep -q '^$(CONTAINER),'; then \
-	    printf '$(BOLD)$(GREEN)▶ Creating container...$(RESET)\n'; \
-	    $(INCUS_BUILD); \
-	else \
-	    if [ "$$(incus list $(CONTAINER) --format csv -c s)" != "RUNNING" ]; then \
-	        printf '$(BOLD)$(GREEN)▶ Starting container...$(RESET)\n'; \
-	        incus start $(CONTAINER); \
-	        sleep 3; \
-	    fi; \
-	    $(INCUS_EXEC) bash -c " \
-	        ip addr show eth0 | grep -q '10.100.100.2' || { \
-	            ip addr add 10.100.100.2/24 dev eth0; \
-	            ip route add default via 10.100.100.1 dev eth0; \
-	            echo nameserver 1.1.1.1 > /etc/resolv.conf; \
-	        }" 2>/dev/null || true; \
-	fi
+	@printf '$(BOLD)$(GREEN)▶ Starting container...$(RESET)\n'
+	@$(INCUS_UP)
 
 .PHONY: container-stop
 container-stop: ## Stop the build container
 	@printf '$(BOLD)▶ Stopping container...$(RESET)\n'
-	@incus stop $(CONTAINER) 2>/dev/null || true
+	@if [ -n "$(INCUS_BUILD_BIN)" ]; then \
+	    incus-build stop; \
+	else \
+	    incus stop $(CONTAINER) 2>/dev/null || true; \
+	fi
 
 .PHONY: container-delete
 container-delete: ## Delete the build container entirely (frees disk space)
@@ -99,12 +98,20 @@ container-delete: ## Delete the build container entirely (frees disk space)
 
 .PHONY: container-shell
 container-shell: container-up ## Open a shell inside the build container
-	@incus exec $(CONTAINER) -- bash
+	@if [ -n "$(INCUS_BUILD_BIN)" ]; then \
+	    incus-build shell; \
+	else \
+	    incus exec $(CONTAINER) -- bash; \
+	fi
 
 .PHONY: container-status
 container-status: ## Show container and network status
 	@printf '$(BOLD)Container:$(RESET)\n'
-	@incus list $(CONTAINER) --format table 2>/dev/null || echo '  (not found)'
+	@if [ -n "$(INCUS_BUILD_BIN)" ]; then \
+	    incus-build status; \
+	else \
+	    incus list $(CONTAINER) --format table 2>/dev/null || echo '  (not found)'; \
+	fi
 	@printf '\n$(BOLD)Network bridge:$(RESET)\n'
 	@ip addr show incusbr-1000 2>/dev/null | grep 'inet ' || echo '  (no IPv4)'
 
@@ -141,11 +148,24 @@ lint: container-up ## Run cargo clippy + fmt check inside the container
 ##@ Flatpak
 
 .PHONY: flatpak-sources
-flatpak-sources: ## Generate cargo-sources.json from Cargo.lock (requires flatpak-cargo-generator.py)
-	@command -v flatpak-cargo-generator.py >/dev/null 2>&1 || \
-	    pip3 install --quiet toml aiohttp aiofiles
-	@python3 build-aux/flatpak-cargo-generator.py Cargo.lock -o cargo-sources.json
-	@printf '$(BOLD)$(GREEN)▶ cargo-sources.json generated$(RESET)\n'
+flatpak-sources: ## Regenerate cargo-sources.json from Cargo.lock
+	@if [ -n "$(INCUS_BUILD_BIN)" ]; then \
+	    incus-build flatpak regen; \
+	else \
+	    command -v flatpak-cargo-generator.py >/dev/null 2>&1 || \
+	        pip3 install --quiet toml aiohttp aiofiles; \
+	    python3 build-aux/flatpak-cargo-generator.py Cargo.lock -o cargo-sources.json; \
+	    printf '$(BOLD)$(GREEN)▶ cargo-sources.json generated$(RESET)\n'; \
+	fi
+
+.PHONY: flatpak-validate
+flatpak-validate: ## Validate metainfo, desktop file, and Flatpak manifest
+	@if [ -n "$(INCUS_BUILD_BIN)" ]; then \
+	    incus-build flatpak validate; \
+	else \
+	    appstreamcli validate --no-net data/io.github.patricioaumedes.Swatchbook.metainfo.xml; \
+	    desktop-file-validate data/io.github.patricioaumedes.Swatchbook.desktop; \
+	fi
 
 .PHONY: flatpak
 flatpak: cargo-sources.json ## Build a local Flatpak bundle (requires flatpak-builder)
@@ -186,14 +206,14 @@ release-major: ## Bump major version (0.1.0 → 1.0.0), build .deb, tag git
 
 .PHONY: release-watch
 release-watch: ## Watch the latest GitHub Actions CI run in real time
-	@gh run watch --repo PAumedes/swatchbook
+	@gh run watch --repo patricioaumedes/swatchbook
 
 .PHONY: release-status
 release-status: ## Show recent GitHub Actions runs and release assets
 	@printf '$(BOLD)Recent CI runs:$(RESET)\n'
-	@gh run list --repo PAumedes/swatchbook --limit 5
+	@gh run list --repo patricioaumedes/swatchbook --limit 5
 	@printf '\n$(BOLD)Published releases:$(RESET)\n'
-	@gh release list --repo PAumedes/swatchbook --limit 5
+	@gh release list --repo patricioaumedes/swatchbook --limit 5
 
 .PHONY: changelog
 changelog: ## Show the full changelog

@@ -1,0 +1,67 @@
+# incus-build configuration for Swatchbook
+# Run `incus-build build` from this directory to build swatchbook.deb
+
+[container]
+name     = "swatchbook-builder"
+image    = "images:ubuntu/26.04"
+# After first `incus-build up`, a snapshot is taken so future container
+# re-creates skip the apt-get install step entirely.
+snapshot = "swatchbook-deps"
+
+# Static network — required in the restricted Incus project where DHCP
+# does not reach through the host bridge without manual NAT config.
+[network]
+static_ip = "10.100.100.2/24"
+gateway   = "10.100.100.1"
+dns       = "1.1.1.1"
+
+[deps]
+packages = [
+    "build-essential", "meson", "ninja-build", "cargo", "rustc",
+    "libgtk-4-dev", "libadwaita-1-dev", "blueprint-compiler",
+    "libpango1.0-dev", "gettext", "desktop-file-utils",
+    "dpkg-dev", "libxml2-utils", "rsync",
+]
+
+# Cargo home and target dir are kept alive between builds so crates don't
+# need to be re-downloaded or re-compiled on every `incus-build build`.
+[cargo]
+home_path   = "/root/cargo-home"
+target_path = "/root/cargo-target"
+
+[build]
+container_src   = "/root/swatchbook-src"
+container_build = "/root/swatchbook-build"
+
+# {src} and {build} are substituted with the paths above.
+# meson setup only runs when the build directory doesn't yet exist;
+# subsequent builds go straight to `meson compile` (incremental).
+setup_cmd   = "meson setup {build} {src} --prefix=/usr"
+compile_cmd = "meson compile -C {build}"
+
+# Packaging steps that run after a successful compile.
+post_steps = [
+    "DESTDIR=/root/swatchbook-pkg meson install -C {build}",
+    "mkdir -p /root/swatchbook-pkg/DEBIAN",
+    "cp {src}/build-aux/control   /root/swatchbook-pkg/DEBIAN/",
+    "cp {src}/build-aux/postinst  /root/swatchbook-pkg/DEBIAN/",
+    "cp {src}/build-aux/postrm    /root/swatchbook-pkg/DEBIAN/",
+    "chmod 0755 /root/swatchbook-pkg/DEBIAN/postinst /root/swatchbook-pkg/DEBIAN/postrm",
+    "mkdir -p /root/swatchbook-pkg/usr/share/doc/swatchbook",
+    "cp {src}/build-aux/copyright  /root/swatchbook-pkg/usr/share/doc/swatchbook/",
+    "cp {src}/build-aux/changelog  /root/swatchbook-pkg/usr/share/doc/swatchbook/",
+    "gzip -n -9 /root/swatchbook-pkg/usr/share/doc/swatchbook/changelog",
+    "dpkg-deb --build /root/swatchbook-pkg /root/swatchbook.deb",
+]
+
+artifact_container = "/root/swatchbook.deb"
+artifact_host      = "swatchbook.deb"
+
+[flatpak]
+app_id        = "io.github.patricioaumedes.Swatchbook"
+manifest      = "io.github.patricioaumedes.Swatchbook.json"
+metainfo      = "data/io.github.patricioaumedes.Swatchbook.metainfo.xml"
+desktop       = "data/io.github.patricioaumedes.Swatchbook.desktop"
+cargo_sources = "cargo-sources.json"
+github_repo   = "patricioaumedes/swatchbook"
+flathub_repo  = "flathub/io.github.patricioaumedes.Swatchbook"
